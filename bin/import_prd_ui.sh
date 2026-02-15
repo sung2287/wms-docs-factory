@@ -34,6 +34,30 @@ select_from_list() {
   printf -v "${out_var}" '%s' "${selected}"
 }
 
+pick_first_by_prefix() {
+  local dir="$1"
+  local prefix="$2"
+  local suffix="$3"
+  local path=""
+  local name=""
+  local rest=""
+
+  while IFS= read -r path; do
+    name="$(basename "${path}")"
+    rest="${name#${prefix}}"
+    if [[ "${rest}" == "${name}" || -z "${rest}" ]]; then
+      continue
+    fi
+    if [[ "${rest}" =~ ^[0-9] ]]; then
+      continue
+    fi
+    echo "${path}"
+    return 0
+  done < <(find "${dir}" -mindepth 1 -maxdepth 1 -type f -name "${prefix}*${suffix}" | sort)
+
+  return 1
+}
+
 echo "== PRD Importer (WSL) =="
 echo "Factory root: ${FACTORY_ROOT}"
 
@@ -83,43 +107,63 @@ echo
 echo "Select PRD:"
 select_from_list prd_file "PRD number?" "${prd_candidates[@]}"
 
-if [[ ! "${prd_file}" =~ ^PRD-([0-9]+)_(.+)\.md$ ]]; then
+if [[ ! "${prd_file}" =~ ^PRD-[0-9]+_.+\.md$ ]]; then
   echo "Invalid PRD filename format: ${prd_file}"
   echo "Expected: PRD-<N>_<action>.md"
   exit 1
 fi
 
-prd_no="${BASH_REMATCH[1]}"
-action="${BASH_REMATCH[2]}"
+prd_num="${prd_file#PRD-}"
+prd_num="${prd_num%%_*}"
 
-src_prd="${factory_project_root}/docs/prd/PRD-${prd_no}_${action}.md"
-src_b="${factory_project_root}/docs/contract/specs/B-${prd_no}_${action}.contract.md"
-src_c="${factory_project_root}/docs/contract/intent_maps/C-${prd_no}_${action}.intent_map.md"
-src_d="${factory_project_root}/docs/platform/D-${prd_no}_${action}.platform.md"
+if [[ ! "${prd_num}" =~ ^[0-9]+$ ]]; then
+  echo "Invalid PRD number: ${prd_num}"
+  exit 1
+fi
 
-dst_prd="${main_project_root}/docs/prd/PRD-${prd_no}_${action}.md"
-dst_b="${main_project_root}/docs/contract/specs/B-${prd_no}_${action}.contract.md"
-dst_c="${main_project_root}/docs/contract/intent_maps/C-${prd_no}_${action}.intent_map.md"
-dst_d="${main_project_root}/docs/platform/D-${prd_no}_${action}.platform.md"
+src_prd="${factory_project_root}/docs/prd/${prd_file}"
 
-archive_prd="${factory_project_root}/_imported/docs/prd/PRD-${prd_no}_${action}.md"
-archive_b="${factory_project_root}/_imported/docs/contract/specs/B-${prd_no}_${action}.contract.md"
-archive_c="${factory_project_root}/_imported/docs/contract/intent_maps/C-${prd_no}_${action}.intent_map.md"
-archive_d="${factory_project_root}/_imported/docs/platform/D-${prd_no}_${action}.platform.md"
+src_b="$(pick_first_by_prefix "${factory_project_root}/docs/contract/specs" "B-${prd_num}" ".contract.md" || true)"
+src_c="$(pick_first_by_prefix "${factory_project_root}/docs/contract/intent_maps" "C-${prd_num}" ".intent_map.md" || true)"
+src_d="$(pick_first_by_prefix "${factory_project_root}/docs/platform" "D-${prd_num}" ".platform.md" || true)"
 
 missing_sources=()
-for src in "${src_prd}" "${src_b}" "${src_c}" "${src_d}"; do
-  if [[ ! -f "${src}" ]]; then
-    missing_sources+=("${src}")
-  fi
-done
+if [[ ! -f "${src_prd}" ]]; then
+  missing_sources+=("Missing PRD-${prd_num} file")
+fi
+if [[ -z "${src_b}" ]]; then
+  missing_sources+=("Missing B-${prd_num} file")
+fi
+if [[ -z "${src_c}" ]]; then
+  missing_sources+=("Missing C-${prd_num} file")
+fi
+if [[ -z "${src_d}" ]]; then
+  missing_sources+=("Missing D-${prd_num} file")
+fi
 
 if [[ ${#missing_sources[@]} -gt 0 ]]; then
   echo
-  echo "Abort: missing source files:"
-  print_list missing_sources
+  echo "Abort:"
+  for msg in "${missing_sources[@]}"; do
+    echo "${msg}"
+  done
   exit 1
 fi
+
+prd_name="$(basename "${src_prd}")"
+b_name="$(basename "${src_b}")"
+c_name="$(basename "${src_c}")"
+d_name="$(basename "${src_d}")"
+
+dst_prd="${main_project_root}/docs/prd/${prd_name}"
+dst_b="${main_project_root}/docs/contract/specs/${b_name}"
+dst_c="${main_project_root}/docs/contract/intent_maps/${c_name}"
+dst_d="${main_project_root}/docs/platform/${d_name}"
+
+archive_prd="${factory_project_root}/_imported/docs/prd/${prd_name}"
+archive_b="${factory_project_root}/_imported/docs/contract/specs/${b_name}"
+archive_c="${factory_project_root}/_imported/docs/contract/intent_maps/${c_name}"
+archive_d="${factory_project_root}/_imported/docs/platform/${d_name}"
 
 existing_destinations=()
 for dst in "${dst_prd}" "${dst_b}" "${dst_c}" "${dst_d}"; do
@@ -177,7 +221,7 @@ mv "${src_d}" "${archive_d}"
 echo
 echo "Import completed successfully."
 echo "Project: ${project}"
-echo "PRD: PRD-${prd_no}_${action}.md"
+echo "PRD: ${prd_name}"
 echo "Copied into main repo:"
 echo "  - ${dst_prd}"
 echo "  - ${dst_b}"
@@ -192,8 +236,8 @@ echo
 echo "Next steps:"
 echo "  cd \"${main_project_root}\""
 echo "  git add docs/"
-echo "  git commit -m \"docs: import PRD-${prd_no} ${action} ABCD\""
+echo "  git commit -m \"docs: import PRD-${prd_num} ABCD\""
 echo
 echo "Self-check:"
-echo "  1) Re-run importer and confirm PRD-${prd_no}_${action}.md is not listed."
+echo "  1) Re-run importer and confirm ${prd_name} is not listed."
 echo "  2) Verify imported files exist under ${main_project_root}/docs/."
