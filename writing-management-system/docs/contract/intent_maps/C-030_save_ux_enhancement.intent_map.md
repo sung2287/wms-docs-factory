@@ -3,6 +3,7 @@
 ## 1. Scope
 - Verify the Save State Machine (Idle -> Dirty -> Saving -> Saved).
 - Validate status bar info update (Snapshot ID/Count, Last Saved Time).
+- Save is disabled in TIME_TRAVEL_MODE (read-only); saving is only allowed in ACTIVE_HEAD_MODE.
 
 ## 2. Scenarios & Expectations
 
