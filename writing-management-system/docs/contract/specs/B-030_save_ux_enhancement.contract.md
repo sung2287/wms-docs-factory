@@ -28,3 +28,5 @@
 - **Save Blocking**: While `saveState === SAVING`, user input MUST be blocked (LOCKED policy).
 - **Immediate Feedback**: `snapshotCount` and `snapshotId` MUST update immediately upon successful API response.
 - **Dirty Persistence**: If `SAVE_FAILURE` occurs, the `DIRTY` state and unsaved changes MUST remain intact.
+- Save operations are only valid in `ACTIVE_HEAD_MODE`.
+- If `viewMode === TIME_TRAVEL_MODE`, TRIGGER_SAVE MUST be ignored or rejected.

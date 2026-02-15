@@ -14,6 +14,7 @@
 
 ## 3. Save Workflow
 - **Execute Save**:
+  - If `viewMode !== 'ACTIVE'`, the Save action MUST abort without API call.
   1. Set `saveState` to `SAVING` (blocked UI).
   2. Call `D-025` Save API (Append-only).
   3. **Success**:

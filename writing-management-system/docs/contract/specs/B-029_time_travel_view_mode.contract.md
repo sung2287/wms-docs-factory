@@ -31,3 +31,5 @@
 - **Read-only Enforcement**: In `TIME_TRAVEL_MODE`, all editing actions (typing, delete, create node) MUST be blocked.
 - **Draft Preservation**: Entering Time Travel MUST NOT discard unsaved changes in the `ACTIVE_HEAD_MODE`.
 - **Save Prohibition**: The "Save" action is disabled in `TIME_TRAVEL_MODE`.
+- In TIME_TRAVEL_MODE, the displayed `snapshotId` MAY differ from the current `head_snapshot_id`.
+- Entering or exiting TIME_TRAVEL_MODE MUST NOT change `head_snapshot_id`.

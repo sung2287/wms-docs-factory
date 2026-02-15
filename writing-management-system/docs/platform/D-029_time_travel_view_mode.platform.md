@@ -20,6 +20,8 @@
   - If `readOnly === true`, disable `onChange`, `onDrop`, `onKeyDown` handlers.
   - Disable toolbar buttons (Save, Delete, New Snippet).
   - Show a persistent banner: "Viewing Read-Only Snapshot".
+- The Save action MUST NOT invoke the Save API when `viewMode === TIME_TRAVEL_MODE`.
+- Platform layer must guard against accidental Save dispatch in TIME_TRAVEL_MODE.
 
 ## 4. Restore Integration
 - The "Restore" button triggers the `EXECUTE_RESTORE` action (PRD-028).
