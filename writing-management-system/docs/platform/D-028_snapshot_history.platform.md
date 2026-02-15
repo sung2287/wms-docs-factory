@@ -16,12 +16,19 @@
 - **Endpoint**: `POST /workspaces/:id/restore`
     - Body: `{ snapshot_id: <target_snapshot_id> }`
 - **Logic**:
-    1. Fetch `target_snapshot` from DB.
-    2. Start Transaction.
-    3. **INSERT**: New snapshot (S_new) with content of `target_snapshot`.
-    4. **UPDATE**: Workspace `head_snapshot_id` = S_new.id.
-    5. **Commit**.
-    6. Return: New snapshot metadata.
+    1. Capture `original_head_id` (read `workspaces.head_snapshot_id`).
+    2. Fetch `target_snapshot` from DB.
+    3. Start Transaction.
+    4. **INSERT**: New snapshot (S_new) with content of `target_snapshot`.
+    5. **UPDATE** workspace head using CONDITIONAL UPDATE:
+       ```sql
+       UPDATE workspaces
+       SET head_snapshot_id = :s_new_id
+       WHERE id = :workspace_id AND head_snapshot_id = :original_head_id;
+       ```
+    6. **Commit** only if `affected_rows == 1`. Otherwise, the transaction MUST abort/rollback (head changed concurrently).
+    7. **Return**: New snapshot metadata.
+- **Safety**: No silent overwrite of the head is allowed.
 
 ## 4. State Synchronization
 - Upon successful restore, the client MUST re-fetch the history list and update the `currentHead` in the local store.

@@ -22,7 +22,10 @@
 - **EXECUTE_RESTORE**:
   - **Pre-condition**: `previewSnapshotId` is valid.
   - **Action**: Generates a *new* snapshot identical to the previewed one.
-  - **Post-condition**: Workspace head points to the new snapshot. `snapshot_count` increments.
+  - **Post-condition**: 
+    - Workspace head points to the new snapshot.
+    - `snapshot_count` MUST increase by exactly 1 on successful restore.
+    - `snapshot_count` MUST remain consistent with the persisted snapshot rows for the workspace.
 
 ## 5. Constraints
 - **Immutability**: Restoring a past snapshot MUST NOT modify the past snapshot record.

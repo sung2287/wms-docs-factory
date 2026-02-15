@@ -28,8 +28,9 @@
 - **Given**: User is previewing S3.
 - **When**: User clicks "Restore this version".
 - **Expectation**:
-    - A confirmation modal appears explaining that a new snapshot will be created.
-    - The modal explicitly states that current unsaved changes (if any) will be preserved in the draft (or lost depending on PRD-029/030 policy, here we assume PRD-029 says drafts are preserved *before* restore, but PRD-028 says "Restore creates new snapshot"). *Correction*: PRD-028/029 implies Restore is a commit action. It creates a new snapshot *from the old one*. The current draft state is effectively replaced by the restored state *as the new head*. The draft *of the previous head* is implicitly discarded or must be saved first. *Clarification*: PRD-029 says "Time Travel Mode does not overwrite local edit state". But *Restore* action explicitly updates head. This implies a context switch back to ACTIVE_HEAD_MODE with the new head. The draft associated with the *previous* head is essentially abandoned or must be saved prior. Given PRD-028's append-only nature, the act of restoring *is* a save of the old state as a new snapshot.
+    - A confirmation modal appears explaining that a new snapshot will be created from the selected snapshot (append-only).
+    - After successful restore, the workspace head updates to the new snapshot and the UI returns to ACTIVE_HEAD_MODE.
+    - Draft behavior is governed by PRD-029 / PRD-030 and is out of scope here.
 
 ### Scenario 4: Execute Restore
 - **Given**: User confirms restore of S3.
