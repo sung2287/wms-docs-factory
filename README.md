@@ -1,62 +1,40 @@
-# WMS Docs Factory
-Draft(초안) 전용 문서 저장소. 정본(Canonical)은 각 메인 레포로 import+commit된 시점부터 유효합니다.
+WMS Docs Factory
 
-## Directory Layout (Multi-Project)
-Each project must exist in both places with the same folder name:
-- Docs factory: `/home/sung2287/projects/wms-docs-factory/<project-name>`
-- Main repo: `/home/sung2287/projects/<project-name>`
+이 레포는 문서 전용 레포입니다.
+코드는 포함하지 않으며, 작성된 문서를 코드 레포로 전달하는 역할만 수행합니다.
 
-Docs factory project structure:
+----------------------------------------
+사용 명령어
+----------------------------------------
 
-```text
-<project-name>/
-  docs/
-    prd/
-    contract/specs/
-    contract/intent_maps/
-    platform/
-  _imported/
-    docs/
-      prd/
-      contract/specs/
-      contract/intent_maps/
-      platform/
-```
+1) main 최신화
+- 실행: npm run sync
+- 동작: main 브랜치로 이동 후, 원격 main 최신 내용 pull
 
-## Importer (WSL Bash)
-Script:
-- `bin/import_prd_ui.sh`
+2) PRD UI import
+- 실행: npm run import
+- 동작: ./bin/import_prd_ui.sh 실행 후 PRD 문서 자동 반영
 
-What it does:
-1. Project 선택 메뉴 표시
-2. PRD 후보 선택 메뉴 표시 (`docs/prd/PRD-*.md`만 표시)
-3. ABCD 4개 문서를 메인 레포의 `docs/**`로 복사
-4. 성공 시 source ABCD를 `_imported/docs/**`로 이동
-5. 다음 실행 시 해당 PRD는 후보에서 사라짐
+3) 문서 완료 후 main 반영 (권장)
+- 실행: npm run publish
+- 동작: main 체크아웃 → 최신화 → 변경사항 add → 커밋 → main으로 push
 
-Safety rules:
-- Source 4개 중 하나라도 없으면 중단 (missing list 출력)
-- Destination 파일이 하나라도 이미 있으면 중단 (overwrite 없음)
-- Source move는 copy 성공 후에만 수행
+4) 현재 브랜치 그대로 푸시
+- 실행: npm run push:all
+- 동작: 변경사항 add → 커밋 → 현재 브랜치 push
 
-## Run From Windows Explorer (Double-Click)
-Windows launcher:
-- `launcher/IMPORT_PRD.bat`
+----------------------------------------
+기본 작업 흐름
+----------------------------------------
 
-### 방법 A: `.bat` 직접 더블클릭
-1. Windows Explorer에서 WSL 경로를 엽니다.
-   - 예: `\\wsl$\Ubuntu\home\sung2287\projects\wms-docs-factory\launcher`
-2. `IMPORT_PRD.bat` 더블클릭
-3. 새 콘솔 창에서 project/PRD 메뉴를 선택
+npm run sync
+npm run import
+npm run publish
 
-### 방법 B: 바탕화면 바로가기 만들기
-1. `IMPORT_PRD.bat` 우클릭 -> `바로 가기 만들기`
-2. 생성된 바로가기를 바탕화면으로 이동
-3. 이후 바로가기 더블클릭으로 실행
+----------------------------------------
+주의사항
+----------------------------------------
 
-## Direct WSL Run
-From any directory:
-
-```bash
-/home/sung2287/projects/wms-docs-factory/bin/import_prd_ui.sh
-```
+- 이 레포는 문서 전용입니다.
+- 코드 파일을 추가하지 마십시오.
+- main 브랜치는 공식 문서 이력 저장소입니다.

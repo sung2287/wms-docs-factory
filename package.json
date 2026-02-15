@@ -1,0 +1,10 @@
+{
+  "name": "docs-repo",
+  "private": true,
+  "scripts": {
+    "import": "bash ./bin/import_prd_ui.sh",
+    "publish": "git checkout main && git pull origin main && git add . && git commit -m \"docs: update\" || echo \"Nothing to commit\" && git push origin main",
+    "push:all": "git add . && git commit -m \"docs: update\" || echo \"Nothing to commit\" && git push",
+    "sync": "git checkout main && git pull origin main"
+  }
+}
