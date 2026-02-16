@@ -109,6 +109,23 @@ For each node where DesignSpec changed:
 
 Markdown body overwrite does NOT automatically clear review flags.
 
+### 7.1 Multi-Root DesignSpec Update Semantics
+
+1. If multiple nodes are classified under "DesignSpec Update" in the Structural Diff phase, review propagation MUST be executed independently for each propagation root in the final Root Set.
+
+2. For each changed node:
+   - Traverse its descendant sections only.
+   - Apply review_required = true for sections with writing_status == "completed".
+   - Do not affect unrelated branches.
+
+3. If changed nodes are in ancestor–descendant relation:
+   - The higher ancestor node SHALL be treated as the propagation root in the final Root Set.
+   - If an ancestor is selected as a propagation root, any descendant nodes classified as UPDATE_SPEC MUST be ignored as separate propagation roots.
+   - Redundant propagation from descendant nodes MUST NOT cause duplicate state mutation.
+   - Final state must remain deterministic and idempotent.
+
+4. Propagation order MUST NOT affect final state. Determinism is required for identical input snapshots and Excel files.
+
 ---
 
 ## 8. Body Conflict Policy
