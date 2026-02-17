@@ -1,47 +1,32 @@
-# B-022: Node State Visualization Contract (v1)
+# B-022: Node State Visualization Contract
 
-## 1. Scope
-- Definition of visual states for nodes in the Tree: UNLINKED, LINKED, and DIRTY.
-- Rules for state transitions and visual indicators (icons).
-- Definition of the `dirtySnippetIdSet` as a session-level auxiliary state.
+## 1. Objective
+Define the pure logic for determining the visual state of a node based on its `writing_status`, `review_required` flag, and session dirty state.
 
-## 2. Non-goals
-- Permanent persistence of the DIRTY icons.
-- Acting as the SSOT for save logic (handled by `isDirty` in PRD-024).
+## 2. Visual State Mapping Logic
 
-## 3. Definitions
-- **UNLINKED**: A node that has no `linkedSnippetId`. Represents a task not yet started.
-- **LINKED**: A node that has a valid `linkedSnippetId`. Represents a task in progress or completed.
-- **DIRTY (Visual)**: A node that reflects an unsaved change in the current session.
-  - **Trigger**: Content change events OR Workspace structural changes (move, reorder, link change, create/delete nodes).
-  - Focus, selection, or cursor movement must NOT trigger DIRTY state.
-- **dirtySnippetIdSet**: A set of Snippet IDs used exclusively for node-level ✏️ icon visualization. This is an auxiliary state and NOT the SSOT for save decisions.
+```typescript
+type VisualStatus = "EMPTY" | "COMPLETED" | "REVIEW_REQUIRED" | "DIRTY_COMPLETED" | "DIRTY_EMPTY";
 
-## 4. State Calculation Rules
-- **UNLINKED Status**: `if node.linkedSnippetId == null`
-- **LINKED Status**: `if node.linkedSnippetId != null`
-- **DIRTY Visual**: `if linkedSnippetId ∈ dirtySnippetIdSet`.
-  - A node displays the ✏️ icon if its `linkedSnippetId` is in the `dirtySnippetIdSet`.
+function calculateVisualStatus(
+  writingStatus: "empty" | "completed",
+  reviewRequired: boolean,
+  isDirty: boolean
+): VisualStatus {
+  if (reviewRequired) return "REVIEW_REQUIRED";
+  
+  if (writingStatus === "completed") {
+    return isDirty ? "DIRTY_COMPLETED" : "COMPLETED";
+  }
+  
+  return isDirty ? "DIRTY_EMPTY" : "EMPTY";
+}
+```
 
-## 5. Acceptance Criteria
-- **Visual Distinction**:
-  - UNLINKED nodes display ⚠️ icon.
-  - LINKED nodes display 🔗 icon.
-  - Nodes with unsaved changes in their linked snippets display ✏️ icon.
-- **Dirty Visualization Propagation**:
-  - Modifying content in the Editor or changing tree structure adds relevant IDs to `dirtySnippetIdSet`.
-  - The corresponding node reflects the DIRTY visual immediately.
-- **State Resolution**:
-  - Upon PRD-024 `saveWorkspace` success, the `dirtySnippetIdSet` must be cleared (batch clear).
-  - The DIRTY icons must disappear from the Tree.
+## 3. Indicator Priority
+1. **REVIEW_REQUIRED** (Highest): Must signal design mismatch regardless of completion.
+2. **DIRTY**: Must signal unsaved session progress.
+3. **WRITING_STATUS**: Basic progress state.
 
-## 6. Constraints
-- The `dirtySnippetIdSet` is a derived/auxiliary state for UI purposes. The global save state is governed by `WorkspaceStore.isDirty`.
-
----
-### PRD-024 정합성 체크리스트
-- [x] canSave/isDirty 정렬
-- [x] statusMessage/isDirty 정렬
-- [x] LOCKED 정책 포함
-- [x] dirtySnippetIdSet은 보조 상태로만 남김
-- [x] Save 성공/실패 시점의 상태전이가 PRD-024와 일치
+## 4. Determinism
+The visual status must be computed reactively from the state store without side effects.

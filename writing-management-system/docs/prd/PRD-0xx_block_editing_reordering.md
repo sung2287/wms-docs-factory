@@ -1,4 +1,4 @@
-# [PRD-044] Block Editing & Reordering
+# [PRD-0xx] Block Editing & Reordering
 
 ## 1. Objective
 단일 문자열로 저장되는 `snippet.body` 내부를 논리적 블록 단위로 구분하여 편집 생산성을 높이고, 블록 간 순서 변경을 용이하게 한다.

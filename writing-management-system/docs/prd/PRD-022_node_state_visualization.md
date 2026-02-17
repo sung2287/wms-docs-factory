@@ -1,84 +1,47 @@
-# PRD-022: Node 상태 시각화 v1
+# PRD-022: Node State Visualization v1.2 (Aligned with Node Model v1.3)
 
 ---
 
-## 1. 목적 (Why)
+## 1. Objective
+To provide visual feedback in the Tree Explorer so that writers can immediately identify which sections are empty, completed, or requiring review due to design changes.
 
-Tree 기반 저작 시스템에서 "어디가 수정되었고, 어디가 비어있는지"를 사용자가 한눈에 파악할 수 있도록 시각적 피드백을 제공한다.
+## 2. Scope
+- Visual representation of `writing_status` ("empty", "completed").
+- Visual representation of `review_required` (boolean).
+- Visual representation of the `DIRTY` state (unsaved local changes).
 
-본 문서는 PRD-024(Workspace 저장 모델)의 정책을 따르며, 사용자에게 수정 위치를 안내하는 **UI 시각화 명세**에 집중한다.
+## 3. Node Visual States
 
----
+### 3.1 Writing Status
+1. **EMPTY**:
+   - Condition: `writing_status === "empty"`
+   - Meaning: No manuscript content has been written.
+   - Indicator: `○` (Empty circle) or dimmed text.
+2. **COMPLETED**:
+   - Condition: `writing_status === "completed"`
+   - Meaning: The writer has explicitly marked this section as finished.
+   - Indicator: `●` (Filled circle) or green checkmark.
 
-## 2. 범위 (Scope)
+### 3.2 Review State
+1. **REVIEW REQUIRED**:
+   - Condition: `review_required === true`
+   - Meaning: An ancestor's DesignSpec has changed, or the node was moved, potentially violating design constraints.
+   - Indicator: `⚠️` (Warning icon) or amber background/text.
+   - Priority: This indicator overrides the "Completed" status visually to signal that the completion might no longer be valid.
 
-### 포함
-1. 노드 상태 정의 (UNLINKED, LINKED) 및 시각 표시
-2. 수정된 노드 식별을 위한 보조 상태(dirtySnippetIdSet) 시각화
-3. Tree Panel 내 상태 아이콘 표시 규칙
-
-### 제외
-- 저장 전략 및 모델 정의 (PRD-024에서 정의)
-- 완료/진행률 통계 대시보드
-- 복잡한 워크플로우 상태 머신
-
----
-
-## 3. 노드 시각 상태 정의
-
-각 노드는 아래와 같은 시각적 상태를 가질 수 있다.
-
-### 1) UNLINKED (미연결)
-- 조건: `node.linkedSnippetId == null`
-- 의미: 작성 단위가 생성되지 않음.
-- 표시: ⚠️ (경고 아이콘)
-
-### 2) LINKED (연결됨)
-- 조건: `node.linkedSnippetId != null`
-- 의미: 작성 단위(Snippet)가 존재함.
-- 표시: 🔗 (연결 아이콘)
-
-### 3) DIRTY (수정됨 - 시각적 보조)
-- 조건: `node.linkedSnippetId`가 `dirtySnippetIdSet`에 포함됨.
-- 의미: 현재 세션에서 해당 노드의 내용이 수정되었으나 아직 저장되지 않음.
-- 표시: ✏️ (아이콘 오버레이 또는 별도 표시)
+### 3.3 Session State (Dirty)
+1. **DIRTY**:
+   - Condition: Local `snippet_body` differs from the last saved snapshot (Auto-save pending).
+   - Meaning: Unsaved changes exist in the current session.
+   - Indicator: `*` (Asterisk) next to the title or a "pencil" icon.
+   - Reset: Cleared immediately upon successful Auto-save or Manual Completion.
 
 ---
 
-## 4. 상태 계산 및 트리거 (Alignment with PRD-024)
-
-### Dirty 발생 (전역 상태와의 연동)
-- **전역 저장 권한**: `WorkspaceStore.isDirty`가 `true`이면 저장 버튼이 활성화된다 (PRD-024 참조).
-- **노드별 표시**: 사용자가 특정 행동(텍스트 수정, 트리 변경 등)을 수행하면 `isDirty`가 `true`가 됨과 동시에, 시각화 보조를 위해 `dirtySnippetIdSet`에 해당 ID가 추가된다.
-
-### Dirty 트리거 행동
-PRD-024의 정책에 따라 아래 행동 시 시각적 Dirty 표시가 발생할 수 있다:
-- Snippet 본문(rawText) 수정
-- Tree 구조 변경 (노드 이동/순서 변경) -> 관련 노드에 시각적 표시 가능
-- Snippet 생성/삭제 및 링크 변경
-
-### 상태 해제
-- PRD-024의 `saveWorkspace` 성공 시점에 `isDirty`가 `false`로 변하며, **`dirtySnippetIdSet`은 즉시 초기화(Clear)**되어 모든 ✏️ 아이콘이 제거된다.
-
----
-
-## 5. UI 가이드라인
-
-- **우선순위**: UNLINKED(⚠️) 표시가 최우선이며, 연결된 경우에만 LINKED(🔗) 및 DIRTY(✏️)를 표시한다.
-- **성능**: TreeNode 컴포넌트는 전체 트리의 리렌더링 없이, 자신과 연관된 `dirtySnippetIdSet`의 변화에만 반응하도록 메모이제이션을 적용한다.
-
----
-
-## 6. 수용 기준 (Acceptance Criteria)
-
-1. 미연결 노드는 Tree에서 명확히 ⚠️로 식별된다.
-2. 내용 수정 시 해당 노드 옆에 ✏️ 아이콘이 즉시 나타난다.
-3. **저장 성공 후 모든 ✏️ 아이콘이 일괄 제거된다.**
-4. 트리 순서 변경 등 구조적 변경 시에도 `isDirty` 정책에 따라 시각적 피드백이 제공된다.
-
----
-
-## 7. 중복 정의 제거 체크리스트
-- [x] 저장 실행 로직(API 호출 등)이 제거되었는가? (PRD-024로 이전)
-- [x] Dirty 판정 SSOT가 `isDirty`임을 명시했는가?
-- [x] 저장 해제 시점이 PRD-024와 일치하는가?
+## 4. UI Guidelines
+- **Tree Explorer**: The icons should be placed to the left of the `external_key`.
+- **Tooltip**: Hovering over a `⚠️` icon should display: *"Design change detected. Please review against the updated Effective DesignSpec."*
+- **Color Coding**:
+  - Green: Completed & Not requiring review.
+  - Amber: Review Required (Action needed).
+  - Grey: Empty.
