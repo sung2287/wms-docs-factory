@@ -38,9 +38,23 @@ Core는 이 전략을 해석하지 않으며, 상태만 전달한다.
 - **Core 로직(엔진)**: 고정. 실행 흐름을 “돌리는” 역할만 한다.
 - **Policy/Workflow(정책)**: 문서(파일)로 정의. 사람이 수정해서 워크플로우를 바꾼다.
 
-즉,
-- “코드 조립기”는 예시일 뿐이며,
-- 동일 엔진 위에서 다양한 워크플로우로 교체 가능해야 한다.
+## 0.5 Terminology Clarification (LOCK)
+
+시스템은 다음 두 축을 엄격히 분리한다:
+
+1. **Phase (실행 단계)**:
+   - "어떤 종류의 작업을 수행 중인가"를 나타냄.
+   - 예: design, implement, diagnose, review.
+   - 워크플로우 라우팅, 문서 주입, 실행 동작을 제어함.
+   - **Decision 검색 범위를 결정하지 않음.**
+
+2. **Domain (적용 범위 / Scope)**:
+   - "작업이 시스템의 어느 영역에 적용되는가"를 나타냄.
+   - 예: runtime, wms, coding, ui, global.
+   - Decision의 `scope` 필드와 직접 매핑됨.
+   - **Decision 검색 필터링에만 사용됨.**
+
+Phase는 행동의 맥락(Behavioral Context)이며, Domain은 의미적 적용 경계(Semantic Applicability)이다. Phase가 바뀐다고 해서 Domain이 자동으로 바뀌지 않는다.
 
 ## 0.3 Core에 도메인 하드코딩 금지
 - 도메인 문자열/경로/정책/템플릿을 Core에 박지 않는다.
@@ -165,11 +179,14 @@ MemoryWrite
 
 ```ts
 interface GraphState {
-  mode: string;
+  mode: string;          // Phase/Mode
+  currentDomain: string; // Decision Scope
   repoScanVersion?: string;
   docBundle?: DocBundle;
 }
 ```
+
+Runtime은 명시적인 Domain 값(`currentDomain`)을 유지해야 한다. 이 값은 Phase와 독립적이며, Retrieval 시 필터링 기준으로 사용된다.
 
 ### 세션 저장 위치 (고정)
 
@@ -209,15 +226,50 @@ modes:
 - 필요 시 Anchor를 통해 Evidence 또는 Decision 원문을 탐색한다.
 - Retrieval은 Anchor → Evidence/Decision 확인 흐름을 따른다.
 
-### Retrieval 규칙
+### Retrieval 규칙 (LOCK)
 
-1. global + axis 로드
-2. current domain + axis
-3. current domain + lock
-4. current domain + normal
-5. Anchor → Evidence 탐색
+1. `global + axis` 로드 (최우선)
+2. `currentDomain + axis` 로드
+3. `currentDomain + lock` 로드
+4. `currentDomain + normal` 로드
+5. Anchor → Evidence/Decision 탐색
+
+### Anchor Hierarchy Compliance (LOCK)
+
+Anchor-based retrieval MUST NOT bypass Decision hierarchical loading rules.
+
+- Anchor may suggest relevant Decision or Evidence.
+- However, final Decision set MUST still respect:
+    axis → lock → normal priority ordering.
+- Anchor-triggered fetch does not override Domain filtering.
+- Anchor never elevates a lower-strength Decision above higher-strength ones.
+
+Anchor functions as a navigation hint only, not a priority override mechanism.
+
+Decision 계층적 로딩(Hierarchical Loading)은 순수하게 Domain(`scope`)을 기준으로 작동한다. Retrieval은 단일 `ORDER BY`로 축소되지 않으며, 단계별 로딩 후 병합 구조를 유지한다. Anchor를 통한 탐색 결과 역시 이 계층 구조를 준수해야 한다.
 
 Decision은 즉시 활성 상태로 반영된다. 수정은 versioned 방식으로 처리된다. Runtime은 Decision 변경을 차단하지 않는다.
+
+### Domain Default Policy (LOCK)
+
+- `currentDomain` MUST be explicitly maintained by Runtime.
+- If `currentDomain` is NOT set for the current session/turn:
+  - Retrieval MUST load only:
+      - `global + axis`
+  - Domain-specific Decisions MUST NOT be loaded.
+- Runtime MUST NOT implicitly derive Domain from Phase.
+- Domain changes may occur only via explicit user action or policy instruction.
+
+This rule prevents accidental Phase→Domain coupling and arbitrary fallback behavior.
+
+## Domain vs Phase Separation (LOCK)
+
+- Domain은 작업 종류이며 수동 전환 기본.
+- Phase는 작업 단계이며 자동 전환 기본.
+- Phase는 Domain을 유도하지 않는다.
+- Domain 변경은 명시적 입력만 허용.
+- Domain 변경 시 StatePatch로 영속화 필수.
+- currentDomain unset 시 global + axis만 로딩.
 
 ### Decision Scope 정의 (정합성 보강)
 

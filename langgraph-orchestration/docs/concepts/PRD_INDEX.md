@@ -3,14 +3,45 @@ PRD-002: Policy Injection Layer
 PRD-001: Core Runtime Skeleton (Policy-Neutral Engine)
 PRD-003: Repository Context Plugin (Optional Tool)
 PRD-004: Session Persistence
+PRD-007: ExecutionPlan Step Contract (LOCK) — ✅ Completed
+- v1 executionPlan 스키마 고정 + executor-level validation 도입
+
+PRD-005: Decision / Evidence Engine — ✅ CLOSED
+- Phase: 3
+- Notes: Domain-scoped Decision/Evidence SSOT engine activated with runtime-safe hierarchical retrieval.
+- Completed: 2026-02-21
+
+PRD-006: Storage Layer (SQLite v1) — ✅ CLOSED
+- Phase: 3
+- Notes: SQLite v1 passive storage layer finalized with versioned Decision schema and atomic persistence.
+- Completed: 2026-02-21
+
+PRD-009: LLM Provider Abstraction & Routing — ✅ Completed
+PRD-008: PolicyInterpreter Contract — ✅ Completed
+PRD-010: Session Lifecycle UX — ✅ DONE
+
 
 [ IN-PROGRESS / MAIN ]
 
 [ PLANNED / MAIN ]
-PRD-007: Step Contract lock
-PRD-005: Decision / Evidence Engine
-PRD-006: Storage Layer (SQLite v1)
-PRD-008: PolicyInterpreter Contract
+PRD-011: Secret Injection UX — 🚀 NEXT/CANDIDATE
+- Decide between dotenv-in-CLI or shell helper; document + validate. 
+PRD-012: Provider/Model Override UX — 🚀 NEXT/CANDIDATE
+- Add --model + env override; improve smoke output and validation.
+
+
+### PRD-009 Deferred Note (Response Schema)
+
+
+The standardized LLM response schema (usage, meta) described in PRD-009 §3.1
+is intentionally deferred.
+
+Current LLMClient interface returns `Promise<string>` to preserve Core neutrality
+and avoid expanding the Core execution contract at this stage.
+
+This is a deliberate v1 decision (minimal surface change).
+Response schema expansion must be handled in a future PRD
+that explicitly updates Core handlers and contracts.
 
 ---
 
@@ -27,3 +58,7 @@ PRD-008: PolicyInterpreter Contract
 - Decision 수정은 versioned 방식이다.
 - strength는 실행 차단과 무관하다.
 - Decision은 global + domain scope를 가진다.
+
+currentDomain을 누가 언제 세팅하는가
+Anchor 저장 인터페이스를 어떻게 추상화할 것인가
+이건 PRD-006/008 영역.

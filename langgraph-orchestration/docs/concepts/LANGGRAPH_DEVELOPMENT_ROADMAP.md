@@ -93,7 +93,7 @@ Decision은 SAVE_DECISION 확정 즉시 DB에 영구 저장되며, 저장된 Dec
 - 장기 기억은 Decision / Evidence / Anchor 3종 구조를 따른다.
 
 상태:
-- 🚧 **진행중** (PRD-005 설계 완료)
+- ✅ **완료**
 
 체크리스트:
 - [x] Decision DB 스키마 설계 (Versioned 포함)
@@ -101,7 +101,24 @@ Decision은 SAVE_DECISION 확정 즉시 DB에 영구 저장되며, 저장된 Dec
 - [x] Axis 우선 Retrieval 로직 구현
 - [x] Evidence 저장 구조 구현
 - [x] Anchor → Evidence 연결 로직 구현
-- [ ] 즉시 저장 후 다음 턴 Retrieval 반영 검증
+- [x] 즉시 저장 후 다음 턴 Retrieval 반영 검증
+
+### Phase 3 Architectural Summary
+
+**PRD-005: Decision / Evidence Engine**
+- Domain-explicit Decision/Evidence SSOT activated
+- Hierarchical retrieval (global → domain strengths)
+- Scope allowlist enforcement (application-level)
+- Summary contamination guard (legacy memory disabled)
+- Runtime wiring completed (SQLite + PlanExecutor deps)
+- Integration tests passing
+
+**PRD-006: Storage Layer (SQLite v1)**
+- Passive storage boundary enforced
+- Versioned Decision chain schema (rootId, atomic update)
+- Evidence + Link tables (many-to-many)
+- WAL + immediate commit policy
+- No business validation inside storage layer
 
 ---
 
@@ -137,15 +154,25 @@ Decision은 SAVE_DECISION 확정 즉시 DB에 영구 저장되며, 저장된 Dec
 
 ---
 
-## Phase 6 – UI 계층 (User Control)
+## Phase 6 – UI 계층 & UX (User Control)
 
 의미:
 - 현재 활성 Mode 상시 표시 UI
 - 사용자의 수동 Mode 전환 인터페이스 구현
 - Decision 저장 확인 모달 및 Evidence 저장 트리거 UI
+- **Session Lifecycle UX (PRD-010)**
 
 상태:
-- ☐ 계획
+- ✅ **완료 (PRD-010)**
+
+### PRD-010: Session Lifecycle UX
+- Added: --fresh-session (explicit reset w/ rotation)
+- Added: --session <name> (namespaced session_state.<name>.json)
+- Strict: hash mismatch default abort preserved
+- Rotation: ops/runtime/_bak/ + keep last 10 (FIFO), fail-fast on rotation errors
+- Scope: runtime/cli + src/session store boundary only (no core changes)
+
+- **Developer Ergonomics**: PRD-010 resolves session hash mismatch friction via explicit reset and namespacing.
 
 ---
 
@@ -169,10 +196,13 @@ Decision은 SAVE_DECISION 확정 즉시 DB에 영구 저장되며, 저장된 Dec
 | PRD-002 | Policy Injection Layer | 완료 | Phase 2 | 도메인 정책 주입 |
 | PRD-003 | Repository Context Plugin | 완료 | Phase 2 | 레포 스캔 및 번들링 |
 | PRD-004 | Session Persistence | 완료 | Phase 1 | 세션 상태 복구 |
-| PRD-005 | Decision / Evidence Engine | 진행중 | Phase 3 | Phase 3 기준 설계 완료 |
-| PRD-006 | Storage Layer (SQLite v1) | 진행중 | Phase 3 | Decision/Evidence 스키마 반영 |
-| PRD-007 | Step Contract Lock | 완료 | Phase 1 | 실행 규격 고정 |
-| PRD-008 | PolicyInterpreter Contract | 진행중 | Phase 1/2 | 정책 해석기 |
+| PRD-005 | Decision / Evidence Engine | COMPLETED | Phase 3 | Phase 3 기준 설계 및 연동 완료 |
+| PRD-006 | Storage Layer (SQLite v1) | COMPLETED | Phase 3 | Decision/Evidence 스키마 반영 완료 |
+| PRD-007 | Step Contract Lock | COMPLETED | Phase 1 | v1 Step Contract LOCK 완료, Executor validation, failure semantics 도입 |
+| PRD-008 | PolicyInterpreter Contract | COMPLETED | Phase 1/2 | 정책 해석기 완료 |
+| PRD-010 | Session Lifecycle UX | COMPLETED | Phase 6 | 세션 리셋 및 네임스페이스 지원 |
+| PRD-011 | Secret Injection UX | PLANNED | Phase 6 | Secret 주입 및 검증 자동화 |
+| PRD-012 | Provider/Model Override UX | PLANNED | Phase 6 | 실행 시점 모델 오버라이드 |
 
 ---
 
@@ -195,4 +225,9 @@ Decision은 SAVE_DECISION 확정 즉시 DB에 영구 저장되며, 저장된 Dec
 - **비차단 원칙**: Runtime은 어떤 상황에서도 실행을 차단하지 않으며, 제어는 상위 거버넌스 층에서 수행한다.
 
 ---
-*Last Updated: 2026-02-21*
+*Last Updated: 2026-02-21 (v1.1 Step Lock + PRD-010 UX Completed)*
+
+NOTE:
+policy/profiles/**/*.yaml 내 legacy step 명칭(recall, memory_write 등)은
+현재 runtime normalizePolicyStep을 통해 v1 StepDefinition으로 변환됨.
+정책 레이어 정리는 별도 Policy PRD에서 처리 예정.

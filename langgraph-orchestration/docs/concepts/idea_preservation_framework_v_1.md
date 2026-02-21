@@ -30,35 +30,39 @@
 
 복잡도를 줄이기 위해 저장 타입은 단 2개만 둔다.
 
-### A. Evidence (근거 스냅샷)
+### A. Evidence (근거/자산)
 
 정의:
-- 나중에 그대로 확인/인용/검증해야 하는 대화 구간
+- 재사용 가능한 지식 자산 (Content Asset)
 
 용도:
-- 책 설계의 핵심 발상
-- 설계 논쟁의 중요한 비교 구간
-- "왜 이렇게 하기로 했는지"가 잘 드러난 부분
+- 잘 작성된 인용구 또는 문장
+- 논리적 구조 프래그먼트
+- 작법 패턴 (Writing Pattern)
+- 분석 노트 및 연구 발췌본
 
 특징:
+- 독립적인 Persistent 개체로 존재함
+- 반드시 Decision에 귀속될 필요가 없음 (선택적 링크)
 - 원문 일부 또는 구간 단위 저장
-- 요약 레이어와 분리
-- 증거/근거 역할
 
 ---
 
-### B. Decision (결정 고정)
+### B. Decision (결정)
 
 정의:
-- 앞으로 계속 적용해야 하는 선택 또는 규칙
+- 앞으로 계속 적용해야 하는 선택 또는 고정 규칙 (Forward-applicable rule)
+- 의미 SSOT (Meaning SSOT)
 
-예시:
-- v1은 Flat 구조로 간다
-- 멀티모달은 MVP 범위에서 제외
-- Core에 도메인 하드코딩 금지
-- 3부 구성은 고정한다
+용도:
+- 설계 축 및 철학 고정
+- 시스템 운영 규칙 확정
+- 구조적 분할 고정
 
-Decision은 "한 줄 결론" 형태로 유지한다.
+특징:
+- "한 줄 결론" 형태로 유지
+- 버전 관리 체계 (rootId chain)를 가짐
+- 강도(strength)와 범위(scope) 속성을 부여받음
 
 ---
 
@@ -74,14 +78,12 @@ Decision은 "한 줄 결론" 형태로 유지한다.
 
 ## Decision Scope (LOCK)
 
-Decision은 다음 scope를 가진다:
+시스템은 실행 단계(Phase)와 적용 범위(Domain)를 엄격히 분리한다.
 
-- global
-- runtime
-- wms
-- coding
-- ui
-- 기타 서브도메인
+- **Phase (Execution Stage)**: 워크플로우 라우팅을 제어함. (예: design, implement)
+- **Domain (Semantic Scope)**: Decision의 적용 범위를 결정하며, `scope` 필드와 직접 매핑됨. (예: runtime, coding, global)
+
+Decision Retrieval은 순수하게 **Domain**을 기준으로 작동하며, Phase가 바뀐다고 해서 Domain이 자동으로 변경되지 않는다.
 
 ### 규칙
 
@@ -104,6 +106,17 @@ axis > lock > normal
 Decision 수정은 overwrite 방식이 아니다. 수정 시 새로운 version이 생성된다.
 
 이전 version은 비활성화(isActive=false)되며, 이력은 유지된다.
+
+### Version Atomicity (LOCK)
+
+Decision version updates MUST be atomic.
+
+When modifying a Decision:
+- Previous active version MUST be deactivated (`isActive=false`)
+- New version MUST be inserted with incremented version number
+- Partial overwrite is strictly forbidden
+
+If any step fails, the update MUST Fail-Fast.
 
 ### Version 구조 개념
 

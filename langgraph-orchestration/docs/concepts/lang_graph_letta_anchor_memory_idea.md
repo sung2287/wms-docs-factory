@@ -58,20 +58,20 @@ Letta는 “대화 전체”를 저장하는 게 아니라,
 
 Anchor는 네비게이션 힌트이며 아래 원칙을 따른다:
 
-- **Anchor는 규칙이 아니다**: 실행을 강제하거나 차단하지 않는다.
+- **자동 생성 및 관리**: Anchor 힌트는 Letta 레이어에서 대화 압축 중 자동으로 생성된다. 생성된 Anchor의 유효성 검증과 DB 영구 저장은 Runtime이 담당한다.
+- **Anchor는 규칙이 아니다**: 실행을 강제하거나 차단하지 않으며, 계층적 Decision Retrieval 규칙을 우회할 수 없다.
 - **Anchor는 원문을 대체하지 않는다**: 상세 내용은 반드시 Evidence나 Decision 원문을 참조해야 한다.
-- **Anchor는 이정표다**: 특정 맥락에서 Evidence 또는 Decision이 존재하는 위치를 가리키는 역할만 수행한다.
+- **Anchor는 이정표다**: 특정 맥락에서 Evidence 또는 Decision이 존재하는 위치를 가리키는 메타데이터 역할만 수행한다.
 
 ### Memory 통합 구조와의 관계
 
 LangGraph의 장기 메모리 타입은 다음 3종으로 제한한다:
 
-- Decision (한 줄 적용 규칙)
-- Evidence (근거 스냅샷)
-- Anchor (네비게이션 힌트)
+- **Decision (한 줄 적용 규칙)**: 의미 SSOT. 앞으로 지켜야 할 규칙.
+- **Evidence (근거/자산)**: 재사용 가능한 지식 자산. 독립적 존재 가능.
+- **Anchor (네비게이션 힌트)**: Letta 자동 생성 이정표.
 
-Anchor는 Decision이나 Evidence를 대체하지 않는다.
-Anchor는 해당 Decision/Evidence가 존재하는 위치를 가리키는 이정표 역할만 수행한다.
+Anchor는 Decision이나 Evidence를 대체하지 않는다. Anchor는 해당 Decision/Evidence가 존재하는 위치를 가리키는 이정표 역할만 수행한다. Retrieval 시 Anchor가 발견되면, 시스템은 연결된 Decision(특정 버전) 또는 Evidence를 사용자에게 제시하여 원문 확인을 유도한다.
 
 ---
 
