@@ -31,7 +31,7 @@ v1 공식 Step 목록 및 규격은 아래와 같다. Step 이름 변경 및 삭
 | :--- | :--- | :--- | :--- |
 | `RepoScan` | 리포지토리 분석 | `{ repoPath: string }` | `{ versionId: string, fileCount: number }` |
 | `ContextSelect` | 컨텍스트 소스 선택 | `{ input: string, sources: string[] }` | `{ selectedContext: any[] }` |
-| `RetrieveMemory` | 과거 기억 검색 | `{ input: string, topK: number }` | `{ items: [{ id, summary, timestamp }] }` |
+| `RetrieveMemory` | 과거 기억 검색 | `{ input: string, topK: number }` | `{ items: [{ id, summary, timestamp }] }` (0..topK allowed) |
 | `PromptAssemble` | 프롬프트 조립 | `{ template: string, vars: object }` | `{ prompt: string }` |
 | `LLMCall` | LLM 추론 실행 | `{ prompt: string, config: object }` | `{ response: string }` |
 | `SummarizeMemory` | 대화 요약 생성 | `{ response: string }` | `{ summary: string, keywords: string[] }` |
@@ -44,10 +44,10 @@ Core Engine은 Step의 비즈니스 의미를 해석하지 않는다. Core는 �
 2. Payload 전달
 3. Result 전달
 4. Failure Semantics 적용
-Payload 내부 스키마 검증 및 의미 해석은 해당 Step Handler의 책임이다.
+Payload 내부 스키마 검증 및 의미 해석은 해당 Step Handler의 책임이다. Core는 Step 간의 암묵적 데이터 전달(implicit wiring)이나 Payload 자동 변형(mutation)을 수행하지 않는다.
 
 ## 4. Step Ordering Rules (LOCK)
-Execution Cycle 내 Step은 아래의 고정된 순서를 따르며, Plan에 존재하는 Step만 선택적으로 실행된다.
+Execution Cycle 내 Step은 아래의 고정된 순서를 따르며, Plan에 존재하는 Step만 선택적으로 실행된다. Executor는 실행 전 steps 시퀀스가 본 canonical order의 부분집합(subsequence)인지 검증해야 한다.
 
 1.  `RepoScan` (Optional)
 2.  `ContextSelect` (Mandatory)
@@ -59,7 +59,7 @@ Execution Cycle 내 Step은 아래의 고정된 순서를 따르며, Plan에 존
 8.  `PersistSession` (Mandatory)
 
 ### Ordering Clarification
-본 순서는 v1 canonical order이다. PolicyInterpreter는 이 순서를 기반으로 Plan을 구성해야 한다. Core는 Plan에 명시된 순서만 실행하며, Step 순서를 재배치하거나 삽입하지 않는다.
+본 순서는 v1 canonical order이다. PolicyInterpreter는 이 순서를 기반으로 Plan을 구성해야 한다. Core는 Plan에 명시된 순서만 실행하며, Step 순서를 재배치하거나 삽입하지 않는다. Executor validation required: 순서 위반 시 CycleFail 처리한다.
 
 ## 5. Failure Semantics (LOCK)
 실패 시 처리 규칙은 아래와 같이 고정된다.

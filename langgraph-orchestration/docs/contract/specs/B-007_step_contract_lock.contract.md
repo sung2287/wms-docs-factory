@@ -14,11 +14,13 @@
 ## 3. I/O Contract Lock
 
 - **Strict Schema Enforcement**: 각 Step의 입력(Payload)과 출력(Result)은 정의된 JSON 스키마를 엄격히 따라야 하며, 정의되지 않은 필드 포함을 금지한다.
-- **Partial Result Prohibited**: 특히 `RetrieveMemory`의 경우, 부분적인 검색 결과 반환을 금지하며 명세된 필드(`id`, `summary`, `timestamp`)만을 포함해야 한다.
+- **Result item schema is strict; count may be 0..topK**: `RetrieveMemory`의 경우, 개별 item은 명세된 필드(`id`, `summary`, `timestamp`)만을 포함해야 하며, 결과 개수는 0에서 `topK` 사이의 값을 허용한다.
+- **Implicit state transfer prohibited**: Executor는 Step 간의 암묵적 데이터 전달이나 Payload 자동 변형을 수행하지 않으며, 모든 데이터 흐름은 명시적이어야 한다.
 
 ## 4. Ordering Lock
 
 - **Fixed Sequence Only**: 정의된 순서(RepoScan → ... → PersistSession) 외의 순서로 실행되는 것을 금지한다.
+- **Core MUST validate subsequence**: Core는 실행 전 Plan의 Step 시퀀스가 v1 canonical order의 부분집합(subsequence)인지 반드시 검증해야 한다.
 - **Optional Execution**: Plan에 Step이 정의되어 있을 때만 실행하며, Core Engine이 자의적으로 Step을 추가하거나 순서를 재배치하는 행위를 금지한다.
 
 ## 5. Failure Lock

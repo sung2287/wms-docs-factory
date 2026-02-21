@@ -10,12 +10,13 @@
 ## 2. Execution Flow
 
 1.  **Plan 수신**: `step_contract_version` 검증.
-2.  **Step Loop**: Plan에 정의된 Step 리스트를 순서대로 순회.
+2.  **Ordering validation before loop**: 실행 전 steps 시퀀스가 v1 canonical order의 부분집합(subsequence)인지 검증. 위반 시 CycleFail.
+3.  **Step Loop**: Plan에 정의된 Step 리스트를 순서대로 순회.
     - `id` 필드를 사용한 로깅 및 추적.
     - Branching/Conditional 구조를 배제한 순차적 실행.
     - 각 Step의 Payload를 Handler로 전달.
-3.  **결과 누적**: 각 Step의 결과를 다음 Step의 입력으로 활용하거나 최종 상태에 반영.
-4.  **Cycle 종료**: 모든 Step 실행 후 `PersistSession`을 통해 상태 확정.
+4.  **결과 누적**: 각 Step의 결과를 결과 누적부(Result Ledger)에 기록. 각 Step Handler는 `priorResults`를 통해 이전 Step의 결과를 읽기 전용(Read-only)으로 조회할 수 있다. Executor는 결과를 사용하여 다음 Step의 Payload를 자동으로 변형하거나 주입하지 않는다.
+5.  **Cycle 종료**: 모든 Step 실행 후 `PersistSession`을 통해 상태 확정.
 
 ### Metadata Enforcement (LOCK)
 
