@@ -255,7 +255,8 @@ Phase 6은 CLI 기반 UX 계약(세션/오버라이드 등)을 고정하며, Pha
 **Phase 6A는 Governance Layer 위에서 동작하며, 번들 무결성 및 세션 고정 규칙을 우회할 수 없다.**
 
 상태:
-- ✅ **완료 (Core UX Stabilized)**
+- 🟡 **부분 완료 (PRD-013 ~ 016 완료)**
+- 🔵 **PRD-017 진행 예정 (NEXT MAIN)**
 
 ### Phase 6A PRD Expansion (React-based Stabilization)
 
@@ -279,7 +280,10 @@ Phase 6은 CLI 기반 UX 계약(세션/오버라이드 등)을 고정하며, Pha
 - **Constraints Preserved**: Core-Zero-Mod 유지, `session_state` 스키마 보존, DTO 내 해시 필드 비노출
 
 #### PRD-017: Provider / Model / Domain UI Control (NEXT)
-... (rest of planned PRDs)
+- **UX-Only**: UX 레이어 전용 기능으로 구현하며, Core / Session schema / Bundle Governance 변경을 엄격히 금지한다.
+- **Hash-Aware**: PRD-012A의 결정론적 플랜 해시 구조를 전제로 작동한다.
+- **Session Restart**: 설정 오버라이드 시 자동 병합 대신 새 세션 유도 방식으로 처리한다.
+- **Scope**: 상단 상태 스트립 UI, 도메인/모델 설정 컨트롤, PRD-017 전용 툴팁 포함.
 
 #### PRD-019: Dev Mode Overlay & Debug Projection
 ... (rest of planned PRDs)
@@ -289,8 +293,8 @@ Phase 6은 CLI 기반 UX 계약(세션/오버라이드 등)을 고정하며, Pha
 2. **Configuration Error Banner**: ✅ 완료 (PRD-015 기반 마련)
 
 ### 🟡 P1 — Comfort Improvements
-3. **Session Management UI**: 🚀 진행 예정 (PRD-016)
-4. **Tooltips**: 🚀 진행 예정 (PRD-016)
+3. **Session Management UI**: ✅ 완료 (PRD-016)
+4. **Tooltips**: 🚀 진행 예정 (PRD-017 범위 포함)
 
 ### 🟢 P2 — Self-Contained App Direction
 5. **Direct Configuration**: 🚀 진행 예정 (PRD-017)
@@ -380,13 +384,15 @@ Phase 6은 CLI 기반 UX 계약(세션/오버라이드 등)을 고정하며, Pha
 - **Contract Enforcement**: Executor와 Interpreter 간의 Step Contract v1.1 LOCK 및 결정론적 해시 검증 적용.
 - **Storage Integrity**: SQLite v1 기반의 Decision/Evidence 저장소가 안정적으로 작동하며 WAL 모드 적용됨.
 - **Verification**: 모든 단위 테스트 및 통합 스모크 테스트 통과.
+- **PRD-018 Verified**: CLI smoke test (Fresh → Reuse → Drift Fail-fast) 검증 완료.
+- **Bundle Governance (DONE)**: PRD-018 구현 완료. 결정론적 해시 무결성(LOCK-17) 및 세션 고정(Pinning) 엔진 활성화. CLI/Web 공통 거버넌스 SSOT 확립.
+- **Governance Isolation**: Bundle Governance Adapter Layer is fully isolated from Core (Strict LOCK-7/17).
 - **Web Runtime Functional**: Chat loop (init → input → state → stream) validated via API-level smoke testing.
 - **React Mount Stability**: Temporal Dead Zone crash resolved in App.tsx
 - **Legacy Route Regression Fixed**: Root path `/` restored after /v2 integration
 - **UI Smoke Verified**: init → input → state → stream validated with session defaulting
 - **Data Safety**: 세션 상태의 JSON 직렬화 및 `extensions` 가독성/순환 참조 안전성 확보.
 - **Web Isolation**: Web DTO Isolation 및 Core Literal Dependency Prohibition 규칙 준수.
-- **Bundle Governance (DONE)**: PRD-018 구현 완료. 결정론적 해시 무결성(LOCK-17) 및 세션 고정(Pinning) 엔진 활성화. CLI/Web 공통 거버넌스 SSOT 확립.
 
 ---
 
@@ -483,7 +489,7 @@ Runtime은 일반 실행 흐름을 차단하지 않는다. 단, Bundle 무결성
 
 # Next Execution Focus (Refinement Phase)
 
-현재 시스템은 **"Chat-First UX Stabilization (Phase 6A)"**의 핵심 기능을 성공적으로 완료하고 **"Web UX Refinement (Phase 6B)"** 단계로 진입한다.
+현재 시스템은 **"Chat-First UX Stabilization (Phase 6A)"**의 핵심 기능을 성공적으로 완료하고 **"Phase 6A 확장 단계"**로 진입한다.
 
 **Primary Focus:**
 - **PRD-017: Provider / Model / Domain UI Control (NEXT MAIN)**
@@ -499,10 +505,9 @@ Runtime은 일반 실행 흐름을 차단하지 않는다. 단, Bundle 무결성
   - 장기 기억 항해를 위한 앵커 감지 로직 설계 (UX 고도화 완료 후 재개)
 
 ---
-*Last Updated: 2026-02-23 (PRD-018 Bundle Governance Finalized)*
+*Last Updated: 2026-02-23 (Post PRD-018 Governance Lock + Phase 6A Alignment)*
 
 NOTE:
 policy/profiles/**/*.yaml 내 legacy step 명칭(recall, memory_write 등)은
 현재 runtime normalizePolicyStep을 통해 v1 StepDefinition으로 변환됨.
 정책 레이어 정리는 별도 Policy PRD에서 처리 예정.
-
