@@ -174,20 +174,20 @@ Decision은 SAVE_DECISION 확정 즉시 DB에 영구 저장되며, 저장된 Dec
 ## Phase 5.5 – Runtime Governance Layer (Workflow Bundle Control)
 
 의미:
-Builder에서 생성된 **Workflow Bundle (Promotion Unit)**을 코드 수정 없이 Runtime에 배포(Promote)하기 위한 메타 팩토리의 핵심 연결 엔진을 구현한다. **PRD-018: Bundle Promotion Pipeline**은 런타임 거버넌스의 SSOT로서 번들의 물리적 격리와 결정론적 무결성을 보장한다.
+Builder에서 생성된 **Workflow Bundle (Promotion Unit)**을 코드 수정 없이 Runtime에 배포(Promote)하기 위한 메타 팩토리의 핵심 연결 엔진을 구현한다. **PRD-018: Bundle Promotion Pipeline**은 런타임 거버넌스의 SSOT로서 번들의 물리적 격리와 결정론적 무결성을 보장하며, **"결정론적 런타임 거버넌스 확립"**의 핵심 기반이 된다.
 
 **계층 구조 (Hierarchy):**
-UX는 Runtime 위 계층이며, Workflow Bundle Governance는 Runtime 내부 통제 계층이다.
+Core는 정책/번들의 물리적 위치를 알지 못하며, Bundle Governance 계층이 Core 외부(Adapter Layer)에서 무결성을 검증하고 주입한다.
 ```
-Core Runtime
+Core Runtime (src/core)
+  ↑ (Context Injection)
+Bundle Governance (Adapter Layer - Phase 5.5)
   ↓
-Workflow Bundle Governance (Phase 5.5)
-  ↓
-UX / Adapter Layer (Phase 6A)
+UX / CLI Layer (Phase 6)
 ```
 
 범위:
-- Manifest Loader (Runtime Core 내부)
+- Manifest Loader (Runtime Core 외부 Adapter 구현)
 - Active Bundle Switching (Symlink 기반 원자적 교체)
 - Profile Switch (rd / prod)
 - **Core-enforced Fallback Contract (LOCK-4)**
@@ -195,30 +195,29 @@ UX / Adapter Layer (Phase 6A)
 LOCK 원칙 반영:
 - **LOCK-1 SSOT Separation**: Bundle loading boundary는 Decision/Evidence 저장소와 물리적으로 완전히 격리된다.
 - **LOCK-6 Hash-Coupled Bundle Version**: 번들 버전은 해시와 결합되어 변경 불가능한(Immutable) 성격을 갖는다.
-- **LOCK-11 Deterministic Bundle Hash Rule**: 정렬된 파일 순서와 컨텐츠 해시 기반의 결정론적 해시 계산 규칙을 강제한다.
+- **LOCK-11/17 Deterministic Bundle Hash Rule**: Sorted Map Hash (path asc 정렬 + content hash) 기반의 결정론적 해시 계산 규칙을 강제한다.
 - **LOCK-15 Runtime Version Compatibility Gate**: 실행 시점에 번들과 런타임 엔진 간의 버전 호환성을 엄격히 검증한다.
 - **Session Pinning (LOCK-5, LOCK-12)**: 세션은 시작 시점의 bundle_version에 고정(Pinned)되며 실행 중 변경되지 않는다.
 
-비범위 (Future Phase로 명시):
-- Canary 배포
-- A/B 테스트
-- 원격 업로드
-- 무중단 핫스왑
-
 상태:
-- ☐ 계획 (PRD-018 SSOT 확정)
+- ✅ **완료 (2026-02-23)**
 
-체크리스트:
-- [ ] manifest.json schema 정의
-- [ ] schema_version / min_runtime_version 검증 (LOCK-15)
-- [ ] bundle_hash 무결성 검증 로직 (LOCK-11)
-- [ ] Deterministic bundle_hash calculation rule fixed (sorted file order + content hash)
-- [ ] Bundle loading boundary strictly separated from Decision/Evidence storage layer (LOCK-1 physical boundary)
-- [ ] Active Bundle symlink 교체 메커니즘
-- [ ] Session 시작 시 bundle_version 고정 (LOCK-5, LOCK-12)
-- [ ] Judge 실패 시 Core Fallback 강제 (LOCK-4)
-- [ ] Rollback 지원 (previous_bundle_ref)
-- [ ] Session metadata에 bundle_version + bundle_hash 기록 (session pinning)
+구현 요약:
+- [x] Workflow Bundle Active Store (`ops/runtime/bundles/active`)
+- [x] LOCK-17 Sorted Map Hash (결정론적 해시)
+- [x] BundleResolver (`runtime/bundle`) 구현 (Adapter Layer)
+- [x] Session별 bundle pin 파일 (`storage/sessions/<session>.bundle_pin.json`)
+- [x] Atomic pin 생성 및 rotate(.bak) 정책 적용
+- [x] `--promote-bundle` 명시적 re-pin 경로 확보
+- [x] `--fresh-session` 시 pin rotate(.bak) 동작 연동
+- [x] bundle_hash를 policyRef에 주입하여 computeExecutionPlanHash 무결성 통합
+- [x] Strict Fail-Fast (BUNDLE_HASH_MISMATCH / VERSION_MISMATCH)
+- [x] Runtime Version Gate (LOCK-15) 구현
+
+검증 결과:
+- [x] npm run typecheck PASS
+- [x] npm test PASS
+- [x] `PROVIDER=openai npm run -s smoke:prd018` PASS (Fresh → Reuse → Drift Fail-fast 시나리오 검증 완료)
 
 ---
 
@@ -375,6 +374,22 @@ Phase 6은 CLI 기반 UX 계약(세션/오버라이드 등)을 고정하며, Pha
 
 ---
 
+# Current Mainline Baseline (2026-02-23)
+
+- **Architecture Stable**: PRD-001부터 PRD-013까지 모든 설계 및 구현 동기화 완료.
+- **Contract Enforcement**: Executor와 Interpreter 간의 Step Contract v1.1 LOCK 및 결정론적 해시 검증 적용.
+- **Storage Integrity**: SQLite v1 기반의 Decision/Evidence 저장소가 안정적으로 작동하며 WAL 모드 적용됨.
+- **Verification**: 모든 단위 테스트 및 통합 스모크 테스트 통과.
+- **Web Runtime Functional**: Chat loop (init → input → state → stream) validated via API-level smoke testing.
+- **React Mount Stability**: Temporal Dead Zone crash resolved in App.tsx
+- **Legacy Route Regression Fixed**: Root path `/` restored after /v2 integration
+- **UI Smoke Verified**: init → input → state → stream validated with session defaulting
+- **Data Safety**: 세션 상태의 JSON 직렬화 및 `extensions` 가독성/순환 참조 안전성 확보.
+- **Web Isolation**: Web DTO Isolation 및 Core Literal Dependency Prohibition 규칙 준수.
+- **Bundle Governance (DONE)**: PRD-018 구현 완료. 결정론적 해시 무결성(LOCK-17) 및 세션 고정(Pinning) 엔진 활성화. CLI/Web 공통 거버넌스 SSOT 확립.
+
+---
+
 # 4. PRD 상태 연동 현황
 
 | PRD | 제목 | 상태 | 해당 Phase | 비고 |
@@ -397,7 +412,7 @@ Phase 6은 CLI 기반 UX 계약(세션/오버라이드 등)을 고정하며, Pha
 | PRD-015 | Chat Timeline Rendering v2 | COMPLETED | Phase 6A | Deterministic Fake Streaming |
 | PRD-016 | Session Management Panel | COMPLETED | Phase 6A | 세션 UX |
 | PRD-017 | Provider/Model/Domain UI Control | PLANNED | Phase 6A | 설정 UI |
-| PRD-018 | Bundle Promotion Pipeline | PLANNED | Phase 5.5 | SSOT 거버넌스 및 번들 승격 |
+| PRD-018 | Bundle Promotion Pipeline | COMPLETED | Phase 5.5 | 결정론적 런타임 거버넌스 확립 |
 | PRD-019 | Dev Mode Overlay | PLANNED | Phase 6A | 디버그 분리 |
 | PRD-020 | Extensible Message Schema | PLANNED | Phase 9 | 멀티모달 준비 |
 
@@ -441,16 +456,22 @@ Runtime은 일반 실행 흐름을 차단하지 않는다. 단, Bundle 무결성
 
 # Appendix A — Changelog (Patch History)
 
-### v1.3 – Bundle Governance Finalization
-- LOCK-1 physical boundary enforced
-- Deterministic bundle_hash rule codified
-- Session pinning principle documented
+### v1.5 – Runtime Governance Activation (2026-02-23)
+- PRD-018 Bundle Promotion Pipeline 전면 구현 및 검증 완료.
+- Sorted Map Hash (LOCK-17) 기반 무결성 검증 엔진 활성화.
+- Session-specific bundle pinning (storage/sessions) 및 rotate 정책 적용.
+- Adapter Layer 기반의 Core-neutral Governance 구조 확립.
 
 ### v1.4 – Governance Alignment
 - Bundle Integrity Fail-fast exception codified
 - Phase 5.5 Governance Layer elevated above UX
 - Session redefined as pinned execution context
 - DocBundle vs Workflow Bundle terminology separated
+
+### v1.3 – Bundle Governance Finalization
+- LOCK-1 physical boundary enforced
+- Deterministic bundle_hash rule codified
+- Session pinning principle documented
 
 ### SSOT Consolidation – PRD-018 Lock
 - PRD-018 확정 (Bundle Promotion Pipeline)
@@ -478,7 +499,7 @@ Runtime은 일반 실행 흐름을 차단하지 않는다. 단, Bundle 무결성
   - 장기 기억 항해를 위한 앵커 감지 로직 설계 (UX 고도화 완료 후 재개)
 
 ---
-*Last Updated: 2026-02-22 (PRD-016 Session Management Finalized)*
+*Last Updated: 2026-02-23 (PRD-018 Bundle Governance Finalized)*
 
 NOTE:
 policy/profiles/**/*.yaml 내 legacy step 명칭(recall, memory_write 등)은
