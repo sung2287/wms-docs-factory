@@ -8,6 +8,8 @@
 
 **본 로드맵은 Summary 기반 장기 기억 시스템을 채택하지 않는다. LangGraph의 장기 의미 저장은 Decision / Evidence 중심 구조를 따른다.**
 
+"LangGraph는 단순 Runtime이 아니라, Policy-Driven Runtime Platform으로 진화하며, Builder에서 생성된 Workflow Bundle을 승격(Promote)하는 구조를 갖는다."
+
 ---
 
 # 2. 참조 고정 문서 (Mandatory References)
@@ -15,10 +17,28 @@
 구현 과정에서 다음 문서를 반드시 참조하여 설계 의도를 유지한다:
 
 - [AI Orchestration Runtime – MVP 설계 문서 v2](./ai_orchestration_runtime_design_v_2.md)
-- [Idea Preservation Framework v1](./idea_preservation_framework_v_1.md)
+- [Idea Preservation Framework v1](./idea_preservation_framework_v_0_집필중심.md)
 - [LangGraph × Letta Anchor Memory Idea](./lang_graph_letta_anchor_memory_idea.md)
 - [LangGraph Orchestration Architecture](./langgraph_orchestration_architecture.md)
 - [PRD_INDEX](./PRD_INDEX.md)
+
+---
+
+## 🔷 Architectural Elevation – Builder / Runtime Separation (NEW)
+
+본 프로젝트는 단일 런타임 구현을 넘어,
+**Builder(Control Plane) ↔ Runtime(Data Plane)** 분리 아키텍처로 확장된다.
+
+- Builder: R&D 설계 앱 (Workflow Bundle 생성)
+- Runtime: 배포된 Bundle을 실행하는 엔진
+- Promotion Pipeline: Builder에서 검증된 Bundle을 Runtime으로 승격
+
+LOCK 원칙:
+
+- 승격 대상은 Workflow Bundle(컨텍스트 스펙)뿐이다.
+- 유저 데이터(Decision/Evidence/Session)는 절대 승격 대상이 아니다.
+- Judge Policy의 판단 기준은 Bundle에 포함되지만,
+  실패 처리(Fallback Contract)는 Runtime Core가 강제한다.
 
 ---
 
@@ -122,38 +142,6 @@ Decision은 SAVE_DECISION 확정 즉시 DB에 영구 저장되며, 저장된 Dec
 
 ---
 
-## Phase 4 – Letta Anchor 연동 (Navigation Hint)
-
-의미:
-- 대화 중 Anchor(네비게이션 힌트) 감지 및 저장
-- Retrieval 시 Anchor를 통한 상기 기능 구현
-- Anchor 발견 시 원문(Evidence/Decision) 확인 강제 워크플로우 구현
-
-상태:
-- ☐ 계획
-
-체크리스트:
-- [ ] Anchor 감지 트리거
-- [ ] Anchor → Evidence/Decision 이정표 연결 로직
-- [ ] 원문 확인 강제(Verification) 루프 구현
-
----
-
-## Phase 5 – 외부 에이전트 오케스트레이션 (Agent Separation)
-
-의미:
-- LangGraph ↔ Gemini CLI (Research / Meaning SSOT) 연동
-- LangGraph ↔ Codex CLI (Implementation / Result SSOT) 연동
-- 조사와 구현의 물리적 역할 분리 강제
-
-상태:
-- ☐ 계획
-
-참조:
-- [langgraph_orchestration_architecture.md](./langgraph_orchestration_architecture.md)
-
----
-
 ## Phase 6 – UI 계층 & UX (User Control)
 
 의미:
@@ -176,7 +164,75 @@ Decision은 SAVE_DECISION 확정 즉시 DB에 영구 저장되며, 저장된 Dec
 
 ---
 
-## Phase 7 – 멀티모달 인터페이스 준비 (Future-Proof)
+## Phase 6.5 – Bundle Promotion Pipeline (NEW)
+
+의미:
+Builder에서 생성된 Workflow Bundle을
+코드 수정 없이 Runtime에 배포(Promote)하기 위한
+메타 팩토리의 핵심 연결 엔진을 구현한다.
+
+범위:
+- Manifest Loader (Runtime Core 내부)
+- Active Bundle Switching (Symlink 기반 원자적 교체)
+- Profile Switch (rd / prod)
+- Core-enforced Fallback Contract
+
+비범위 (Future Phase로 명시):
+- Canary 배포
+- A/B 테스트
+- 원격 업로드
+- 무중단 핫스왑
+
+상태:
+- ☐ 계획
+
+체크리스트:
+- [ ] manifest.json schema 정의
+- [ ] schema_version / min_runtime_version 검증
+- [ ] bundle_hash 무결성 검증 로직
+- [ ] Deterministic bundle_hash calculation rule fixed (sorted file order + content hash)
+- [ ] Bundle loading boundary strictly separated from Decision/Evidence storage layer (LOCK-1 physical boundary)
+- [ ] Active Bundle symlink 교체 메커니즘
+- [ ] Session 시작 시 bundle_version 고정
+- [ ] Judge 실패 시 Core Fallback 강제
+- [ ] Rollback 지원 (previous_bundle_ref)
+- [ ] Session metadata에 bundle_version + bundle_hash 기록 (session pinning)
+
+---
+
+## Phase 7 – Letta Anchor 연동 (Navigation Hint)
+
+의미:
+- 대화 중 Anchor(네비게이션 힌트) 감지 및 저장
+- Retrieval 시 Anchor를 통한 상기 기능 구현
+- Anchor 발견 시 원문(Evidence/Decision) 확인 강제 워크플로우 구현
+
+상태:
+- ☐ 계획
+
+체크리스트:
+- [ ] Anchor 감지 트리거
+- [ ] Anchor → Evidence/Decision 이정표 연결 로직
+- [ ] 원문 확인 강제(Verification) 루프 구현
+
+---
+
+## Phase 8 – Agent Separation
+
+의미:
+- LangGraph ↔ Gemini CLI (Research / Meaning SSOT) 연동
+- LangGraph ↔ Codex CLI (Implementation / Result SSOT) 연동
+- 조사와 구현의 물리적 역할 분리 강제
+
+상태:
+- ☐ 계획
+
+참조:
+- [langgraph_orchestration_architecture.md](./langgraph_orchestration_architecture.md)
+
+---
+
+## Phase 9 – 멀티모달 인터페이스 준비 (Future-Proof)
 
 의미:
 - `InputEvent` (Text/Image/Audio) 추상화 구조 확보
@@ -216,6 +272,13 @@ Decision은 SAVE_DECISION 확정 즉시 DB에 영구 저장되며, 저장된 Dec
 4. **Core 중립성**: Core Engine 내부에 특정 도메인 문자열이나 로직이 하드코딩되지 않음.
 5. **검증 완료**: 런타임 빌드 시 오류가 없으며 타입 안정성이 확보됨.
 
+### Phase 6.5 Specific DoD (Bundle Promotion):
+- Runtime이 Active Bundle을 읽어 초기화 가능
+- 호환되지 않는 Bundle은 활성화되지 않으며, Runtime은 기존 정상 Active Bundle을 유지한다.
+- Prod Profile에서 Judge 실패 시 Core Fallback 동작 확인
+- 기존 Session은 기존 bundle_version 유지
+- Bundle switching applies only at session start; in-flight sessions remain pinned to their starting bundle_version.
+
 ---
 
 # 6. 변경 불가 원칙
@@ -223,9 +286,17 @@ Decision은 SAVE_DECISION 확정 즉시 DB에 영구 저장되며, 저장된 Dec
 - **철학 우선**: 철학 문서와 충돌하는 어떠한 구현도 허용되지 않는다. 구현이 철학과 충돌할 경우 구현을 수정하거나 철학 문서를 공식적으로 갱신(Decision Log)해야 한다.
 - **구조적 중립성**: Phase의 순서는 효율성에 따라 조정될 수 있으나, Core와 Domain의 분리 구조는 변경될 수 없다.
 - **비차단 원칙**: Runtime은 어떤 상황에서도 실행을 차단하지 않으며, 제어는 상위 거버넌스 층에서 수행한다.
+- Bundle rejection은 Runtime 실행 차단을 의미하지 않는다. 호환되지 않거나 검증 실패한 Bundle은 단순히 활성화되지 않으며, Runtime은 직전 정상 Active Bundle로 안전하게 복귀한다.
 
 ---
-*Last Updated: 2026-02-21 (v1.1 Step Lock + PRD-010 UX Completed)*
+**Patch Applied Summary (v1.3 Bundle Governance Finalization)**
+
+- Phase 6.5: LOCK-1 물리적 경계 강제 및 결정론적 bundle_hash 규칙 추가.
+- DoD: 세션 bundle_version 고정(Pinning) 원칙 명문화.
+- Governance: Bundle Reject는 실행 차단이 아닌 안전한 Active Bundle 유지로 정의.
+
+---
+*Last Updated: 2026-02-23 (v1.3 Bundle Governance Finalization)*
 
 NOTE:
 policy/profiles/**/*.yaml 내 legacy step 명칭(recall, memory_write 등)은
