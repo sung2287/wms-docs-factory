@@ -3,32 +3,31 @@ PRD-002: Policy Injection Layer
 PRD-001: Core Runtime Skeleton (Policy-Neutral Engine)
 PRD-003: Repository Context Plugin (Optional Tool)
 PRD-004: Session Persistence
-PRD-007: ExecutionPlan Step Contract (LOCK) — ✅ Completed
-- v1 executionPlan 스키마 고정 + executor-level validation 도입
-
-PRD-005: Decision / Evidence Engine — ✅ CLOSED
-- Phase: 3
-- Notes: Domain-scoped Decision/Evidence SSOT engine activated with runtime-safe hierarchical retrieval.
-- Completed: 2026-02-21
-
-PRD-006: Storage Layer (SQLite v1) — ✅ CLOSED
-- Phase: 3
-- Notes: SQLite v1 passive storage layer finalized with versioned Decision schema and atomic persistence.
-- Completed: 2026-02-21
-
-PRD-009: LLM Provider Abstraction & Routing — ✅ Completed
-PRD-008: PolicyInterpreter Contract — ✅ Completed
-PRD-010: Session Lifecycle UX — ✅ DONE
-
+PRD-007: ExecutionPlan Step Contract (LOCK)
+PRD-005: Decision / Evidence Engine
+PRD-006: Storage Layer (SQLite v1)
+PRD-009: LLM Provider Abstraction & Routing
+PRD-008: PolicyInterpreter Contract
+PRD-010: Session Lifecycle UX
+PRD-011: Secret Injection UX
+PRD-012A: Deterministic & Domain-Aware Hash
+PRD-012: Provider/Model Override UX
+PRD-013: Minimal Web UI(= CLI escape)
+PRD-014: Web UI Framework Introduction
+PRD-015: Chat Timeline Rendering v2
+PRD-016: Session Management Panel
 
 [ IN-PROGRESS / MAIN ]
 
 [ PLANNED / MAIN ]
-PRD-011: Secret Injection UX — 🚀 NEXT/CANDIDATE
-- Decide between dotenv-in-CLI or shell helper; document + validate. 
-PRD-012: Provider/Model Override UX — 🚀 NEXT/CANDIDATE
-- Add --model + env override; improve smoke output and validation.
+PRD-017: Provider / Model / Domain UI Control
+- 상단 상태 스트립 UI
+- Provider / Model 선택 UI
+- Domain 전환 인터페이스
+- Server SSOT 유지
 
+PRD-019: Dev Mode Overlay & Debug Projection
+- Plan metadata Dev 표시
 
 ### PRD-009 Deferred Note (Response Schema)
 

@@ -71,12 +71,15 @@ LOCK 원칙:
 - Core Engine과 Domain Pack의 물리적/논리적 분리
 
 상태:
-- ✅ **완료** (PRD-001, 004, 007 기반)
+- ✅ **완료** (PRD-001, 004, 007, 008, 009 기반)
 
 체크리스트:
 - [x] Domain-neutral GraphState 정의
 - [x] Session state 캐시 저장소 (`session_state.json`)
-- [x] Step Contract Lock 구현
+- [x] Step Contract v1.1 LOCK 구현 및 활성화
+- [x] Version gate + ordering + duplicate guard 강제 적용
+- [x] PolicyInterpreter와 Executor 계약 동기화 완료
+- [x] `persistAnchor`를 포함한 엄격한 interface 노출
 - [x] 기본 Mode 전환 로직
 
 ---
@@ -116,6 +119,11 @@ Decision은 SAVE_DECISION 확정 즉시 DB에 영구 저장되며, 저장된 Dec
 - ✅ **완료**
 
 체크리스트:
+- [x] 계층적 Retrieval 구현 (Global → Domain → Strength)
+- [x] `SAVE_DECISION` 호출 시 즉시 영구 저장 (Persistence)
+- [x] SQLite v1 Passive Boundary 강제 (비즈니스 로직 분리)
+- [x] WAL + 외래 키(FK) + 원자적 버전 업데이트 검증 완료
+- [x] Anchor linking 작동 확인 (수동 단계 연동 완료)
 - [x] Decision DB 스키마 설계 (Versioned 포함)
 - [x] Scope + Strength 필드 반영
 - [x] Axis 우선 Retrieval 로직 구현
@@ -211,8 +219,8 @@ Builder에서 생성된 Workflow Bundle을
 - ☐ 계획
 
 체크리스트:
-- [ ] Anchor 감지 트리거
-- [ ] Anchor → Evidence/Decision 이정표 연결 로직
+- [ ] Anchor 자동 감지 트리거 (현재는 수동/명시적 persistAnchor 위주)
+- [ ] Anchor → Evidence/Decision 이정표 연결 로직 고도화
 - [ ] 원문 확인 강제(Verification) 루프 구현
 
 ---
@@ -233,11 +241,145 @@ Builder에서 생성된 Workflow Bundle을
 ---
 
 ## Phase 9 – 멀티모달 인터페이스 준비 (Future-Proof)
+## Phase 6 – Core UI Infrastructure
+
+의미:
+- CLI UX 안정화 및 Web Observer 인프라 계층 구축
+- 현재 활성 Mode 상시 표시 및 수동 Mode 전환 기본 인터페이스
+- Decision/Evidence 저장 트리거 UI 및 세션 제어 도구 (PRD-010, 012, 013)
+
+상태:
+- ✅ **완료 (Completed)**
+
+### PRD-010: Session Lifecycle UX
+- **CLI UX Stabilized**: PRD-010 기반의 세션 제어 도구 완성
+- **Session Namespace**: `--session <name>`을 통한 독립적 세션 환경 지원
+- **Fresh Session**: `--fresh-session`을 통한 명시적 리셋 및 자동 로테이션 (FIFO 10개 유지)
+- **Fail-fast Protection**: 해시 불일치나 로테이션 오류 시 엄격한 차단으로 데이터 정합성 보호
+- **Developer Ergonomics**: 세션 충돌 방지 및 재시작 편의성 대폭 개선
+
+### PRD-012: Provider / Model Override UX
+- **Canonicalization SSOT**: provider/model 정규화 책임을 `provider.router.ts`로 일원화
+- **Session-Hash-Strict**: 해시 불일치 시 자동 병합 금지 및 HashMismatch UX 가이드(재실행 안내) 추가
+- **Volatile Override**: 오버라이드 설정은 실행 단위 휘발성으로 유지 (`session_state` 스키마 확장 없음)
+- **Core-Zero-Mod**: `src/core` 변경 없이 런타임 어댑터 레벨에서 구현 완료
+- **PRD-012A 연동**: Deterministic & Domain-Aware Plan Hash 구조 적용 완료
+
+### PRD-013: Minimal Web UI (Observer v1)
+- **Local-only Web Adapter**: REST + SSE 기반의 경량 웹 서버 구현
+- **Unified Runtime Entry**: `runRuntimeOnce`를 통한 CLI와 동일한 실행 경로 확보
+- **Web Session Namespace**: `web.*` 접두사를 통한 CLI 세션과의 물리적 격리
+- **In-flight Guard**: 프로세스 메모리 기반 Single-writer 제어 (동시 실행 시 409 Conflict)
+- **Hash Mismatch UX**: 자동 세션 초기화 대신 사용자 동의 기반 가이드 노출
+- **Safe DTO Projection**: `GraphStateSnapshot`을 통한 Core 타입 노출 차단 (DTO Isolation)
+- **Core Neutrality**: `src/core` 수정 없이 어댑터 레이어 확장을 통해 구현
+
+---
+
+## Phase 6A — Chat-First UX Stabilization
+
+의미:
+- 워크플로우 자동화 확장 전, Web UI를 실제 사용 가능한 수준(ChatGPT-level)으로 안정화
+- "Multi-provider Chat" 인터페이스로서의 정체성 확립
+- 개발자 도구가 아닌 사용자 앱으로서의 최소 UX 확보
+
+상태:
+- ✅ **완료 (Core UX Stabilized)**
+
+### Phase 6A PRD Expansion (React-based Stabilization)
+
+#### PRD-013: Minimal Web UI (CLI Escape) ✅ **DONE**
+- REST + SSE 기반의 경량 웹 서버 및 Unified Runtime Entry 확보
+
+#### PRD-014: Web UI Framework Introduction ✅ **DONE**
+- React 기반 렌더링 레이어 도입 및 DTO Isolation 환경 구축 완료
+
+#### PRD-015: Chat Timeline Rendering v2 ✅ **DONE**
+- **Deterministic Fake Streaming**: 엄격한 리플레이 트리거를 통한 시각적 스트리밍 구현
+- **SSOT Integrity**: 서버 이력을 최종 권위로 유지하며 클라이언트 측 임의 변조 차단
+- **Drift Hard Stop**: 재생 중 스냅샷 업데이트 시 즉시 동기화 강제
+
+#### PRD-016: Session Management Panel ✅ **DONE** (merge: 749832f)
+- **Web Session Management Panel**: `web.*` 접두사를 가진 세션에 대한 목록화/전환/삭제 기능 추가
+- **Namespace Authority**: `runtime/orchestrator/session_namespace.ts`를 통한 세션 발견 및 검증 권한 중앙화
+- **Web-only Metadata Overlay**: `ops/runtime/web_session_meta.json`을 통한 비침습적 메타데이터 저장 (Atomic tmp+rename, Serialized write)
+- **Safe Rotation**: `fs.unlink`를 금지하고 UTC 타임스탬프 기반의 이름 변경(Rename-only) 로테이션 정책 적용
+- **Pre-engine Hook**: 사용자 메시지 전송 시 `runRuntimeOnce` 호출 전 메타데이터 선제적 갱신
+- **Constraints Preserved**: Core-Zero-Mod 유지, `session_state` 스키마 보존, DTO 내 해시 필드 비노출
+
+#### PRD-017: Provider / Model / Domain UI Control (NEXT)
+... (rest of planned PRDs)
+
+#### PRD-019: Dev Mode Overlay & Debug Projection
+... (rest of planned PRDs)
+
+### 🔴 P0 — Critical (Immediate Usability)
+1. **Chat-style Messaging**: ✅ 완료 (PRD-015)
+2. **Configuration Error Banner**: ✅ 완료 (PRD-015 기반 마련)
+
+### 🟡 P1 — Comfort Improvements
+3. **Session Management UI**: 🚀 진행 예정 (PRD-016)
+4. **Tooltips**: 🚀 진행 예정 (PRD-016)
+
+### 🟢 P2 — Self-Contained App Direction
+5. **Direct Configuration**: 🚀 진행 예정 (PRD-017)
+6. **State Visualization**: 🚀 진행 예정 (PRD-019)
+
+**Phase 6A Governance Lock (Non-Goals):**
+- UI 레이어로 비즈니스 로직 이관 금지
+- 클라이언트 측 상태 권한(Authority) 부여 금지
+- 프론트엔드 내 정책 해석(Policy Interpretation) 로직 구현 금지
+- Phase 6A 내 Decision DB 직접 조회 도구 구현 금지
+- Phase 6A 내 멀티 에이전트 오케스트레이션 UI 기능 구현 금지 (해당 기능 구현은 Phase 5 이후에만 허용)
+- PRD-014 ~ PRD-017은 UX 안정화 범위 내에서만 수행되며, Agent Orchestration 기능 구현은 Phase 5 이후에만 허용된다.
+- 워크플로우 그래프 시각화 확장 금지
+- 정책(Policy) 시스템 재설계 금지
+- Core Runtime 수정 금지
+- 저장소(Storage) 레이어 구조 변경 금지
+- **No runtime contract changes during UX stabilization**
+- **No session state schema modification during this phase**
+- **UX 레이어 개선에만 집중**
+
+## Current Web Runtime Status
+- `/` → Legacy UI (explicitly restored; 404 regression fixed)
+- `/v2` → React UI (primary UX direction)
+- **Parallel Serving Active**: Legacy and React co-exist during stabilization phase
+- **REST/SSE Contracts**: Unchanged (GraphStateSnapshot projection-only)
+- **Unified Entry**: CLI & Web share `runRuntimeOnce`
+- **Session Query Enforcement**: All Web API calls include explicit `?session=` parameter
+- **Core-Zero-Mod**: No changes to `src/core/**`
+- **Build-Time Guard Active**: dependency-cruiser + CI enforcement
+- **No Runtime Contract Changes During UX Stabilization**
+
+---
+
+# Current Mainline Baseline (2026-02-22)
+
+- **Architecture Stable**: PRD-001부터 PRD-013까지 모든 설계 및 구현 동기화 완료.
+- **Contract Enforcement**: Executor와 Interpreter 간의 Step Contract v1.1 LOCK 및 결정론적 해시 검증 적용.
+- **Storage Integrity**: SQLite v1 기반의 Decision/Evidence 저장소가 안정적으로 작동하며 WAL 모드 적용됨.
+- **Verification**: 모든 단위 테스트 및 통합 스모크 테스트 통과.
+- **Web Runtime Functional**: Chat loop (init → input → state → stream) validated via API-level smoke testing.
+- **React Mount Stability**: Temporal Dead Zone crash resolved in App.tsx
+- **Legacy Route Regression Fixed**: Root path `/` restored after /v2 integration
+- **UI Smoke Verified**: init → input → state → stream validated with session defaulting
+- **Data Safety**: 세션 상태의 JSON 직렬화 및 `extensions` 가독성/순환 참조 안전성 확보.
+- **Web Isolation**: Web DTO Isolation 및 Core Literal Dependency Prohibition 규칙 준수.
+
+---
+
+## Phase 7 – 멀티모달 인터페이스 준비 (Future-Proof)
 
 의미:
 - `InputEvent` (Text/Image/Audio) 추상화 구조 확보
 - `ModelRequest` 및 `Output Artifact` 추상화
 - Core 수정 없이 멀티모달 확장 가능한 구조 검증
+
+#### PRD-018: Extensible Message Schema (Multimodal-Ready)
+- 메시지 스키마 확장 가능 구조 준비
+- text-only 가정 제거
+- tool / image / event 타입 확장 대비
+- Core 수정 없이 Adapter 레벨에서 확장
 
 상태:
 - ☐ 계획
@@ -248,17 +390,26 @@ Builder에서 생성된 Workflow Bundle을
 
 | PRD | 제목 | 상태 | 해당 Phase | 비고 |
 |:---|:---|:---|:---|:---|
-| PRD-001 | Core Runtime Skeleton | 완료 | Phase 1 | 정책 중립 엔진 |
-| PRD-002 | Policy Injection Layer | 완료 | Phase 2 | 도메인 정책 주입 |
-| PRD-003 | Repository Context Plugin | 완료 | Phase 2 | 레포 스캔 및 번들링 |
-| PRD-004 | Session Persistence | 완료 | Phase 1 | 세션 상태 복구 |
-| PRD-005 | Decision / Evidence Engine | COMPLETED | Phase 3 | Phase 3 기준 설계 및 연동 완료 |
-| PRD-006 | Storage Layer (SQLite v1) | COMPLETED | Phase 3 | Decision/Evidence 스키마 반영 완료 |
-| PRD-007 | Step Contract Lock | COMPLETED | Phase 1 | v1 Step Contract LOCK 완료, Executor validation, failure semantics 도입 |
-| PRD-008 | PolicyInterpreter Contract | COMPLETED | Phase 1/2 | 정책 해석기 완료 |
+| PRD-001 | Core Runtime Skeleton | COMPLETED | Phase 1 | 정책 중립 엔진 완료 |
+| PRD-002 | Policy Injection Layer | COMPLETED | Phase 2 | 도메인 정책 주입 완료 |
+| PRD-003 | Repository Context Plugin | COMPLETED | Phase 2 | 레포 스캔 및 번들링 완료 |
+| PRD-004 | Session Persistence | COMPLETED | Phase 1 | 세션 상태 복구 완료 |
+| PRD-005 | Decision / Evidence Engine | COMPLETED | Phase 3 | 결정/근거 SSOT 엔진 완료 |
+| PRD-006 | Storage Layer (SQLite v1) | COMPLETED | Phase 3 | SQLite 영구 저장소 연동 완료 |
+| PRD-007 | Step Contract Lock | COMPLETED | Phase 1 | v1.1 Contract LOCK 적용 완료 |
+| PRD-008 | PolicyInterpreter Contract | COMPLETED | Phase 1 | 정책 해석기 계약 완료 |
+| PRD-009 | LLM Provider Routing | COMPLETED | Phase 1 | 프로바이더 라우팅 기초 완료 |
 | PRD-010 | Session Lifecycle UX | COMPLETED | Phase 6 | 세션 리셋 및 네임스페이스 지원 |
-| PRD-011 | Secret Injection UX | PLANNED | Phase 6 | Secret 주입 및 검증 자동화 |
-| PRD-012 | Provider/Model Override UX | PLANNED | Phase 6 | 실행 시점 모델 오버라이드 |
+| PRD-011 | Secret Injection UX | COMPLETED | Phase 6 | 시크릿 로컬 저장 및 주입 완료 |
+| PRD-012A | Deterministic Plan Hash | COMPLETED | Phase 6 | 결정론적/도메인 인지 해시 도입 |
+| PRD-012 | Provider/Model Override UX | COMPLETED | Phase 6 | 실행 시점 모델 오버라이드 |
+| PRD-013 | Minimal Web UI | COMPLETED | Phase 6 | 관찰자 모드 Web UI 완료 |
+| PRD-014 | Web UI Framework Introduction | COMPLETED | Phase 6A | React UI (/v2) active |
+| PRD-015 | Chat Timeline Rendering v2 | COMPLETED | Phase 6A | Deterministic Fake Streaming |
+| PRD-016 | Session Management Panel | PLANNED | Phase 6A | 세션 UX |
+| PRD-017 | Provider/Model/Domain UI Control | PLANNED | Phase 6A | 설정 UI |
+| PRD-018 | Extensible Message Schema | PLANNED | Phase 7 | 멀티모달 준비 |
+| PRD-019 | Dev Mode Overlay | PLANNED | Phase 6A | 디버그 분리 |
 
 ---
 
@@ -296,7 +447,26 @@ Builder에서 생성된 Workflow Bundle을
 - Governance: Bundle Reject는 실행 차단이 아닌 안전한 Active Bundle 유지로 정의.
 
 ---
-*Last Updated: 2026-02-23 (v1.3 Bundle Governance Finalization)*
+
+# Next Execution Focus (Refinement Phase)
+
+현재 시스템은 **"Chat-First UX Stabilization (Phase 6A)"**의 핵심 기능을 성공적으로 완료하고 **"Web UX Refinement (Phase 6B)"** 단계로 진입한다.
+
+**Primary Focus:**
+- **PRD-017: Provider / Model / Domain UI Control (NEXT MAIN)**
+  - 상단 상태 스트립 UI (Provider/Model/Domain)
+  - 요청 단위 오버라이드 및 새 세션 유도 (PRD-012A 해시 인지)
+  - "unset" 도메인 처리 및 서버 SSOT 권한 유지
+
+**Environment Note:**
+- `run:web` manual smoke can fail in some sandbox environments due to EPERM port binding; tests/typecheck/ui:build passed.
+
+**Secondary (Deferred):**
+- **Phase 4: Letta Anchor 연동**
+  - 장기 기억 항해를 위한 앵커 감지 로직 설계 (UX 고도화 완료 후 재개)
+
+---
+*Last Updated: 2026-02-22 (PRD-016 Session Management Finalized)*
 
 NOTE:
 policy/profiles/**/*.yaml 내 legacy step 명칭(recall, memory_write 등)은
