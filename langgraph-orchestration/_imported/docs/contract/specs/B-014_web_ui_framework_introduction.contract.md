@@ -10,7 +10,7 @@
 
 ## 3. 데이터 계약 (API/DTO)
 - **기존 계약 유지**: `GraphStateSnapshot`, `HistoryItem`, `ProviderResolutionEnv` 등 기존 DTO를 그대로 사용한다.
-- **확장 제한**: 멀티모달 대응을 위한 스키마 확장은 PRD-018에서 별도로 다루며, 본 계약에서는 데이터 구조 수정을 금지한다.
+- **확장 제한**: 멀티모달 대응을 위한 스키마 확장은 PRD-020에서 별도로 다루며, 본 계약에서는 데이터 구조 수정을 금지한다.
 
 ## 4. 금지 규칙 (Strict Prohibitions)
 - **Direct DB Access**: UI 레이어에서 Decision/Evidence SQLite DB에 직접 접근하거나 조작하는 행위 금지.

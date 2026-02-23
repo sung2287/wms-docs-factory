@@ -24,7 +24,18 @@
 
 ---
 
-## 🔷 Architectural Elevation – Builder / Runtime Separation (NEW)
+## 2.1 Terminology Separation
+
+- **DocBundle**:
+  모드 진입 시 주입되는 문서 단위 (Phase 2)
+- **Workflow Bundle**:
+  Builder에서 Runtime으로 승격되는 실행 스펙 단위 (Phase 5.5)
+
+두 개념은 물리적/개념적으로 분리된다.
+
+---
+
+## 2.2 Architectural Elevation – Builder / Runtime Separation (NEW)
 
 본 프로젝트는 단일 런타임 구현을 넘어,
 **Builder(Control Plane) ↔ Runtime(Data Plane)** 분리 아키텍처로 확장된다.
@@ -34,11 +45,9 @@
 - Promotion Pipeline: Builder에서 검증된 Bundle을 Runtime으로 승격
 
 LOCK 원칙:
-
-- 승격 대상은 Workflow Bundle(컨텍스트 스펙)뿐이다.
-- 유저 데이터(Decision/Evidence/Session)는 절대 승격 대상이 아니다.
-- Judge Policy의 판단 기준은 Bundle에 포함되지만,
-  실패 처리(Fallback Contract)는 Runtime Core가 강제한다.
+- [LOCK] 승격 대상은 Workflow Bundle(컨텍스트 스펙)뿐이다.
+- [LOCK] 유저 데이터(Decision/Evidence/Session)는 절대 승격 대상이 아니다.
+- [LOCK] Judge Policy의 판단 기준은 Bundle에 포함되지만, Fallback Contract는 Runtime Core가 강제한다.
 
 ---
 
@@ -47,7 +56,7 @@ LOCK 원칙:
 ## Phase 0 – 철학 고정 (Philosophy Foundation)
 
 의미:
-- Runtime 차단 금지 원칙 확립
+- Runtime 비차단 원칙 확립 (단, Bundle Integrity는 Governance 예외 조항으로 Fail-fast 허용)
 - Decision Versioned 구조 설계
 - Memory 타입 3종(Decision/Evidence/Anchor) 고정
 - Git/DB(의미/결과) 저장소 분리 원칙 확정
@@ -82,9 +91,13 @@ LOCK 원칙:
 - [x] `persistAnchor`를 포함한 엄격한 interface 노출
 - [x] 기본 Mode 전환 로직
 
+### Session Evolution Clarification (Post PRD-018)
+- Session = execution state + pinned bundle metadata + plan hash context
+- 이는 Governance 강화에 따른 확장이며, 초기 세션 철학(단순 상태 저장)을 침해하지 않는다.
+
 ---
 
-## Phase 2 – Bundle-first 문서 주입 (Context Injection)
+## Phase 2 – DocBundle-first 문서 주입 (Mode Injection Unit)
 
 의미:
 - `mode_docs.yaml` 기반의 DocBundle Loader 구현
@@ -150,9 +163,70 @@ Decision은 SAVE_DECISION 확정 즉시 DB에 영구 저장되며, 저장된 Dec
 
 ---
 
+## Phase 4 – Reserved (Deferred)
+
+의미:
+- 현재는 계획 보류(Deferred) 상태이다.
+- 관련 기능은 Phase 7(Anchor)의 장기 기억 항해 로직과 연계되어 추후 적정 시점에 재개될 예정이다.
+
+---
+
+## Phase 5.5 – Runtime Governance Layer (Workflow Bundle Control)
+
+의미:
+Builder에서 생성된 **Workflow Bundle (Promotion Unit)**을 코드 수정 없이 Runtime에 배포(Promote)하기 위한 메타 팩토리의 핵심 연결 엔진을 구현한다. **PRD-018: Bundle Promotion Pipeline**은 런타임 거버넌스의 SSOT로서 번들의 물리적 격리와 결정론적 무결성을 보장한다.
+
+**계층 구조 (Hierarchy):**
+UX는 Runtime 위 계층이며, Workflow Bundle Governance는 Runtime 내부 통제 계층이다.
+```
+Core Runtime
+  ↓
+Workflow Bundle Governance (Phase 5.5)
+  ↓
+UX / Adapter Layer (Phase 6A)
+```
+
+범위:
+- Manifest Loader (Runtime Core 내부)
+- Active Bundle Switching (Symlink 기반 원자적 교체)
+- Profile Switch (rd / prod)
+- **Core-enforced Fallback Contract (LOCK-4)**
+
+LOCK 원칙 반영:
+- **LOCK-1 SSOT Separation**: Bundle loading boundary는 Decision/Evidence 저장소와 물리적으로 완전히 격리된다.
+- **LOCK-6 Hash-Coupled Bundle Version**: 번들 버전은 해시와 결합되어 변경 불가능한(Immutable) 성격을 갖는다.
+- **LOCK-11 Deterministic Bundle Hash Rule**: 정렬된 파일 순서와 컨텐츠 해시 기반의 결정론적 해시 계산 규칙을 강제한다.
+- **LOCK-15 Runtime Version Compatibility Gate**: 실행 시점에 번들과 런타임 엔진 간의 버전 호환성을 엄격히 검증한다.
+- **Session Pinning (LOCK-5, LOCK-12)**: 세션은 시작 시점의 bundle_version에 고정(Pinned)되며 실행 중 변경되지 않는다.
+
+비범위 (Future Phase로 명시):
+- Canary 배포
+- A/B 테스트
+- 원격 업로드
+- 무중단 핫스왑
+
+상태:
+- ☐ 계획 (PRD-018 SSOT 확정)
+
+체크리스트:
+- [ ] manifest.json schema 정의
+- [ ] schema_version / min_runtime_version 검증 (LOCK-15)
+- [ ] bundle_hash 무결성 검증 로직 (LOCK-11)
+- [ ] Deterministic bundle_hash calculation rule fixed (sorted file order + content hash)
+- [ ] Bundle loading boundary strictly separated from Decision/Evidence storage layer (LOCK-1 physical boundary)
+- [ ] Active Bundle symlink 교체 메커니즘
+- [ ] Session 시작 시 bundle_version 고정 (LOCK-5, LOCK-12)
+- [ ] Judge 실패 시 Core Fallback 강제 (LOCK-4)
+- [ ] Rollback 지원 (previous_bundle_ref)
+- [ ] Session metadata에 bundle_version + bundle_hash 기록 (session pinning)
+
+---
+
 ## Phase 6 – UI 계층 & UX (User Control)
 
 의미:
+Phase 6은 CLI 기반 UX 계약(세션/오버라이드 등)을 고정하며, Phase 6A는 Web Chat UI 안정화에 집중한다.
+
 - 현재 활성 Mode 상시 표시 UI
 - 사용자의 수동 Mode 전환 인터페이스 구현
 - Decision 저장 확인 모달 및 Evidence 저장 트리거 UI
@@ -172,116 +246,14 @@ Decision은 SAVE_DECISION 확정 즉시 DB에 영구 저장되며, 저장된 Dec
 
 ---
 
-## Phase 6.5 – Bundle Promotion Pipeline (NEW)
-
-의미:
-Builder에서 생성된 Workflow Bundle을
-코드 수정 없이 Runtime에 배포(Promote)하기 위한
-메타 팩토리의 핵심 연결 엔진을 구현한다.
-
-범위:
-- Manifest Loader (Runtime Core 내부)
-- Active Bundle Switching (Symlink 기반 원자적 교체)
-- Profile Switch (rd / prod)
-- Core-enforced Fallback Contract
-
-비범위 (Future Phase로 명시):
-- Canary 배포
-- A/B 테스트
-- 원격 업로드
-- 무중단 핫스왑
-
-상태:
-- ☐ 계획
-
-체크리스트:
-- [ ] manifest.json schema 정의
-- [ ] schema_version / min_runtime_version 검증
-- [ ] bundle_hash 무결성 검증 로직
-- [ ] Deterministic bundle_hash calculation rule fixed (sorted file order + content hash)
-- [ ] Bundle loading boundary strictly separated from Decision/Evidence storage layer (LOCK-1 physical boundary)
-- [ ] Active Bundle symlink 교체 메커니즘
-- [ ] Session 시작 시 bundle_version 고정
-- [ ] Judge 실패 시 Core Fallback 강제
-- [ ] Rollback 지원 (previous_bundle_ref)
-- [ ] Session metadata에 bundle_version + bundle_hash 기록 (session pinning)
-
----
-
-## Phase 7 – Letta Anchor 연동 (Navigation Hint)
-
-의미:
-- 대화 중 Anchor(네비게이션 힌트) 감지 및 저장
-- Retrieval 시 Anchor를 통한 상기 기능 구현
-- Anchor 발견 시 원문(Evidence/Decision) 확인 강제 워크플로우 구현
-
-상태:
-- ☐ 계획
-
-체크리스트:
-- [ ] Anchor 자동 감지 트리거 (현재는 수동/명시적 persistAnchor 위주)
-- [ ] Anchor → Evidence/Decision 이정표 연결 로직 고도화
-- [ ] 원문 확인 강제(Verification) 루프 구현
-
----
-
-## Phase 8 – Agent Separation
-
-의미:
-- LangGraph ↔ Gemini CLI (Research / Meaning SSOT) 연동
-- LangGraph ↔ Codex CLI (Implementation / Result SSOT) 연동
-- 조사와 구현의 물리적 역할 분리 강제
-
-상태:
-- ☐ 계획
-
-참조:
-- [langgraph_orchestration_architecture.md](./langgraph_orchestration_architecture.md)
-
----
-
-## Phase 9 – 멀티모달 인터페이스 준비 (Future-Proof)
-## Phase 6 – Core UI Infrastructure
-
-의미:
-- CLI UX 안정화 및 Web Observer 인프라 계층 구축
-- 현재 활성 Mode 상시 표시 및 수동 Mode 전환 기본 인터페이스
-- Decision/Evidence 저장 트리거 UI 및 세션 제어 도구 (PRD-010, 012, 013)
-
-상태:
-- ✅ **완료 (Completed)**
-
-### PRD-010: Session Lifecycle UX
-- **CLI UX Stabilized**: PRD-010 기반의 세션 제어 도구 완성
-- **Session Namespace**: `--session <name>`을 통한 독립적 세션 환경 지원
-- **Fresh Session**: `--fresh-session`을 통한 명시적 리셋 및 자동 로테이션 (FIFO 10개 유지)
-- **Fail-fast Protection**: 해시 불일치나 로테이션 오류 시 엄격한 차단으로 데이터 정합성 보호
-- **Developer Ergonomics**: 세션 충돌 방지 및 재시작 편의성 대폭 개선
-
-### PRD-012: Provider / Model Override UX
-- **Canonicalization SSOT**: provider/model 정규화 책임을 `provider.router.ts`로 일원화
-- **Session-Hash-Strict**: 해시 불일치 시 자동 병합 금지 및 HashMismatch UX 가이드(재실행 안내) 추가
-- **Volatile Override**: 오버라이드 설정은 실행 단위 휘발성으로 유지 (`session_state` 스키마 확장 없음)
-- **Core-Zero-Mod**: `src/core` 변경 없이 런타임 어댑터 레벨에서 구현 완료
-- **PRD-012A 연동**: Deterministic & Domain-Aware Plan Hash 구조 적용 완료
-
-### PRD-013: Minimal Web UI (Observer v1)
-- **Local-only Web Adapter**: REST + SSE 기반의 경량 웹 서버 구현
-- **Unified Runtime Entry**: `runRuntimeOnce`를 통한 CLI와 동일한 실행 경로 확보
-- **Web Session Namespace**: `web.*` 접두사를 통한 CLI 세션과의 물리적 격리
-- **In-flight Guard**: 프로세스 메모리 기반 Single-writer 제어 (동시 실행 시 409 Conflict)
-- **Hash Mismatch UX**: 자동 세션 초기화 대신 사용자 동의 기반 가이드 노출
-- **Safe DTO Projection**: `GraphStateSnapshot`을 통한 Core 타입 노출 차단 (DTO Isolation)
-- **Core Neutrality**: `src/core` 수정 없이 어댑터 레이어 확장을 통해 구현
-
----
-
 ## Phase 6A — Chat-First UX Stabilization
 
 의미:
 - 워크플로우 자동화 확장 전, Web UI를 실제 사용 가능한 수준(ChatGPT-level)으로 안정화
 - "Multi-provider Chat" 인터페이스로서의 정체성 확립
 - 개발자 도구가 아닌 사용자 앱으로서의 최소 UX 확보
+
+**Phase 6A는 Governance Layer 위에서 동작하며, 번들 무결성 및 세션 고정 규칙을 우회할 수 없다.**
 
 상태:
 - ✅ **완료 (Core UX Stabilized)**
@@ -353,29 +325,46 @@ Builder에서 생성된 Workflow Bundle을
 
 ---
 
-# Current Mainline Baseline (2026-02-22)
+## Phase 7 – Letta Anchor 연동 (Navigation Hint)
 
-- **Architecture Stable**: PRD-001부터 PRD-013까지 모든 설계 및 구현 동기화 완료.
-- **Contract Enforcement**: Executor와 Interpreter 간의 Step Contract v1.1 LOCK 및 결정론적 해시 검증 적용.
-- **Storage Integrity**: SQLite v1 기반의 Decision/Evidence 저장소가 안정적으로 작동하며 WAL 모드 적용됨.
-- **Verification**: 모든 단위 테스트 및 통합 스모크 테스트 통과.
-- **Web Runtime Functional**: Chat loop (init → input → state → stream) validated via API-level smoke testing.
-- **React Mount Stability**: Temporal Dead Zone crash resolved in App.tsx
-- **Legacy Route Regression Fixed**: Root path `/` restored after /v2 integration
-- **UI Smoke Verified**: init → input → state → stream validated with session defaulting
-- **Data Safety**: 세션 상태의 JSON 직렬화 및 `extensions` 가독성/순환 참조 안전성 확보.
-- **Web Isolation**: Web DTO Isolation 및 Core Literal Dependency Prohibition 규칙 준수.
+의미:
+- 대화 중 Anchor(네비게이션 힌트) 감지 및 저장
+- Retrieval 시 Anchor를 통한 상기 기능 구현
+- Anchor 발견 시 원문(Evidence/Decision) 확인 강제 워크플로우 구현
+
+상태:
+- ☐ 계획
+
+체크리스트:
+- [ ] Anchor 자동 감지 트리거 (현재는 수동/명시적 persistAnchor 위주)
+- [ ] Anchor → Evidence/Decision 이정표 연결 로직 고도화
+- [ ] 원문 확인 강제(Verification) 루프 구현
 
 ---
 
-## Phase 7 – 멀티모달 인터페이스 준비 (Future-Proof)
+## Phase 8 – Agent Separation
+
+의미:
+- LangGraph ↔ Gemini CLI (Research / Meaning SSOT) 연동
+- LangGraph ↔ Codex CLI (Implementation / Result SSOT) 연동
+- 조사와 구현의 물리적 역할 분리 강제
+
+상태:
+- ☐ 계획
+
+참조:
+- [langgraph_orchestration_architecture.md](./langgraph_orchestration_architecture.md)
+
+---
+
+## Phase 9 – 멀티모달 인터페이스 준비 (Future-Proof)
 
 의미:
 - `InputEvent` (Text/Image/Audio) 추상화 구조 확보
 - `ModelRequest` 및 `Output Artifact` 추상화
 - Core 수정 없이 멀티모달 확장 가능한 구조 검증
 
-#### PRD-018: Extensible Message Schema (Multimodal-Ready)
+#### PRD-020: Extensible Message Schema (Multimodal-Ready)
 - 메시지 스키마 확장 가능 구조 준비
 - text-only 가정 제거
 - tool / image / event 타입 확장 대비
@@ -406,10 +395,11 @@ Builder에서 생성된 Workflow Bundle을
 | PRD-013 | Minimal Web UI | COMPLETED | Phase 6 | 관찰자 모드 Web UI 완료 |
 | PRD-014 | Web UI Framework Introduction | COMPLETED | Phase 6A | React UI (/v2) active |
 | PRD-015 | Chat Timeline Rendering v2 | COMPLETED | Phase 6A | Deterministic Fake Streaming |
-| PRD-016 | Session Management Panel | PLANNED | Phase 6A | 세션 UX |
+| PRD-016 | Session Management Panel | COMPLETED | Phase 6A | 세션 UX |
 | PRD-017 | Provider/Model/Domain UI Control | PLANNED | Phase 6A | 설정 UI |
-| PRD-018 | Extensible Message Schema | PLANNED | Phase 7 | 멀티모달 준비 |
+| PRD-018 | Bundle Promotion Pipeline | PLANNED | Phase 5.5 | SSOT 거버넌스 및 번들 승격 |
 | PRD-019 | Dev Mode Overlay | PLANNED | Phase 6A | 디버그 분리 |
+| PRD-020 | Extensible Message Schema | PLANNED | Phase 9 | 멀티모달 준비 |
 
 ---
 
@@ -423,12 +413,12 @@ Builder에서 생성된 Workflow Bundle을
 4. **Core 중립성**: Core Engine 내부에 특정 도메인 문자열이나 로직이 하드코딩되지 않음.
 5. **검증 완료**: 런타임 빌드 시 오류가 없으며 타입 안정성이 확보됨.
 
-### Phase 6.5 Specific DoD (Bundle Promotion):
+### Phase 5.5 – Runtime Governance Layer DoD:
 - Runtime이 Active Bundle을 읽어 초기화 가능
 - 호환되지 않는 Bundle은 활성화되지 않으며, Runtime은 기존 정상 Active Bundle을 유지한다.
 - Prod Profile에서 Judge 실패 시 Core Fallback 동작 확인
 - 기존 Session은 기존 bundle_version 유지
-- Bundle switching applies only at session start; in-flight sessions remain pinned to their starting bundle_version.
+- Bundle switching applies only at session start; in-flight sessions remain pinned to their starting bundle_version. (번들 교체는 세션 시작 시점에만 적용되며, 실행 중인 세션은 시작 시점의 번들 버전에 고정된다.)
 
 ---
 
@@ -436,15 +426,37 @@ Builder에서 생성된 Workflow Bundle을
 
 - **철학 우선**: 철학 문서와 충돌하는 어떠한 구현도 허용되지 않는다. 구현이 철학과 충돌할 경우 구현을 수정하거나 철학 문서를 공식적으로 갱신(Decision Log)해야 한다.
 - **구조적 중립성**: Phase의 순서는 효율성에 따라 조정될 수 있으나, Core와 Domain의 분리 구조는 변경될 수 없다.
-- **비차단 원칙**: Runtime은 어떤 상황에서도 실행을 차단하지 않으며, 제어는 상위 거버넌스 층에서 수행한다.
-- Bundle rejection은 Runtime 실행 차단을 의미하지 않는다. 호환되지 않거나 검증 실패한 Bundle은 단순히 활성화되지 않으며, Runtime은 직전 정상 Active Bundle로 안전하게 복귀한다.
+- **비차단 원칙**: Runtime은 일반 실행 흐름에서 차단을 수행하지 않으며, 제어는 상위 거버넌스 층에서 수행한다.
+
+### Governance Exception Clause – Bundle Integrity Fail-fast
+Runtime은 일반 실행 흐름을 차단하지 않는다. 단, Bundle 무결성 실패는 Core 보호를 위한 예외적 Fail-fast이며, 다음 조건에 한하여 시스템 보호를 위한 즉시 차단을 허용한다:
+
+1) **bundle_hash 무결성 불일치**
+2) **runtime_version < manifest.min_runtime_version**
+3) **pin 파일 불일치 또는 위변조 감지**
+
+여기서 '즉시 차단'은 신규 Bundle 활성화 절차의 중단(Abort)을 의미하며, Runtime 프로세스 자체 종료를 의미하지 않는다. 이 Fail-fast는 사용자 로직 차단이 아니라 Runtime Core 보호를 위한 무결성 수호 장치다. Bundle rejection은 Runtime 실행 중단이 아니라, 직전 정상 Active Bundle 유지로 정의된다.
 
 ---
-**Patch Applied Summary (v1.3 Bundle Governance Finalization)**
 
-- Phase 6.5: LOCK-1 물리적 경계 강제 및 결정론적 bundle_hash 규칙 추가.
-- DoD: 세션 bundle_version 고정(Pinning) 원칙 명문화.
-- Governance: Bundle Reject는 실행 차단이 아닌 안전한 Active Bundle 유지로 정의.
+# Appendix A — Changelog (Patch History)
+
+### v1.3 – Bundle Governance Finalization
+- LOCK-1 physical boundary enforced
+- Deterministic bundle_hash rule codified
+- Session pinning principle documented
+
+### v1.4 – Governance Alignment
+- Bundle Integrity Fail-fast exception codified
+- Phase 5.5 Governance Layer elevated above UX
+- Session redefined as pinned execution context
+- DocBundle vs Workflow Bundle terminology separated
+
+### SSOT Consolidation – PRD-018 Lock
+- PRD-018 확정 (Bundle Promotion Pipeline)
+- PRD-020 재번호 지정
+- LOCK-1/4/5/6/11/12/15 명시
+- Phase 5.5 정식 승격 및 계층화 완료
 
 ---
 
@@ -462,7 +474,7 @@ Builder에서 생성된 Workflow Bundle을
 - `run:web` manual smoke can fail in some sandbox environments due to EPERM port binding; tests/typecheck/ui:build passed.
 
 **Secondary (Deferred):**
-- **Phase 4: Letta Anchor 연동**
+- **Phase 7: Letta Anchor 연동**
   - 장기 기억 항해를 위한 앵커 감지 로직 설계 (UX 고도화 완료 후 재개)
 
 ---
@@ -472,3 +484,4 @@ NOTE:
 policy/profiles/**/*.yaml 내 legacy step 명칭(recall, memory_write 등)은
 현재 runtime normalizePolicyStep을 통해 v1 StepDefinition으로 변환됨.
 정책 레이어 정리는 별도 Policy PRD에서 처리 예정.
+
