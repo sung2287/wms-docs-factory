@@ -1,12 +1,16 @@
 # **🚀 [Master Blueprint] AI 장기기억 저술 SaaS & 메타 팩토리 아키텍처**
 
+이 문서는 LangGraph 시스템의 상위 컨텍스트(Anchor Blueprint)이다.
+새로운 설계 제안은 본 문서의 방향을 침해하지 않는 범위 내에서만 허용된다.
+본 문서에 명시된 원칙은 PRD 및 구현 문서보다 상위 개념으로 간주된다.
+
 ## **I. Core Identity & Non-Negotiables (철학 및 핵심 가치)**
 
 본 시스템은 "99%의 대중에게 창작의 환상을, 1%의 설계자에게 시스템 통제권을" 제공하는 것을 본질로 하며, 어떠한 경우에도 타협할 수 없는 다음의 원칙을 따른다.
 
 *   **시스템의 실체**: 완벽한 결과물은 단일 AI의 지능이 아니라, 백엔드에 설계된 **'결정론적 메타 파이프라인(LangGraph)'**에서 나온다. 사용자는 대화만 하지만, 시스템은 의도를 정해진 스키마에 채워 넣어 세계관을 직조한다.
 *   **[LOCK-1] SSOT 분리 선언**: 승격(Promote)되는 대상은 오직 'Workflow Bundle(컨텍스트 스펙)'뿐이다. 유저 데이터(원문/기억/세션)는 번들과 물리적/논리적으로 완전히 격리된다.
-*   **Runtime의 본질**: 런타임은 기본적으로 실행기(Executor)이며 데이터 평면(Data Plane)이다. 시스템은 비차단(Non-blocking) 원칙을 고수하되, 오직 번들 무결성 및 거버넌스 실패 시에만 예외적으로 Fail-fast를 허용한다.
+*   **Runtime의 본질**: 런타임은 기본적으로 실행기(Executor)이며 데이터 평면(Data Plane)이다. 시스템은 기본적으로 비차단(Non-blocking) 원칙을 고수한다. 실행 차단은 번들 정책에 의해 발생하지 않으며, 오직 Runtime Core의 안전 계약(Fallback Contract) 범위 내에서만 제한적으로 허용된다. 정책은 실행을 제안하거나 경고할 수 있으나, Core가 아닌 정책이 직접 실행을 중단시키지 않는다.
 *   **기억의 SSOT 정의**: 
     *   **Decision**: 의미(Meaning)의 SSOT이며, 운영 DB에 저장되는 버전 관리된 규칙이다.
     *   **Anchor**: 네비게이션 전용(Navigation-only) 힌트이며, 원문을 대체하거나 규칙을 우회할 수 없다.
@@ -29,7 +33,7 @@
 
 ### **3. Runtime Governance (Safety Net)**
 *   **[LOCK-4] Core-enforced Fallback**: 판사 AI(Judge Policy)의 판단 실패나 불확실성 발생 시, 시스템은 번들의 정책이 아닌 Runtime Core에 하드코딩된 Fallback 계약을 강제로 따른다.
-*   **[LOCK-5] 가디언 루프 (Guardian/Validator Loop)**: 실행 전/후에 Policy Memory를 대조하는 Validator Hook을 실행하여 **ALLOW(통과), WARN(알림), BLOCK(중단)** 신호를 통해 시스템 무결성을 수호한다.
+*   **[LOCK-5] 가디언 루프 (Guardian/Validator Loop)**: 실행 전/후에 Policy Memory를 대조하는 Validator Hook을 실행하여 **ALLOW(통과), WARN(알림), BLOCK(중단)** 신호를 통해 시스템 무결성을 수호한다. Guardian Loop는 구조적/정책적 정합성을 점검하는 수호 레이어이며, 번들 정책이 Runtime Core를 우회하거나 변경하지 못하도록 보장하는 역할을 한다.
 
 ---
 
@@ -51,11 +55,13 @@
 *   **기억의 선명도**: 유료 티어는 벡터 DB(Hot)를 통한 고선명 기억을 제공하고, 무료 티어는 S3 동면(Archive)을 통한 망각 현상을 구현한다.
 *   **아하 모멘트 (Recall UX)**: 결제 시 과거의 떡밥(Anchor)을 AI가 먼저 언급하며 세계관을 복구하는 연출을 통해 매몰 비용과 가치를 증명한다.
 
+Memory 계층은 의미를 구조화하기 위한 인지 모델이며, Retrieval 우선순위, strength 로딩 규칙, domain 필터링과 같은 구현 세부는 별도 스펙 문서에서 정의된다. 본 문서는 개념적 구조만을 고정한다.
+
 ---
 
 ## **IV. Product Surface (UI/UX as Structural Expression)**
 
-UI는 시스템 구조를 시각적으로 표현하고 사용자의 의도를 구조화하는 창구다.
+UI는 단순 프론트엔드 설계가 아니라, LangGraph의 구조 철학이 사용자에게 드러나는 표면 레이어이다. 따라서 UI 구조는 기능이 아니라 시스템 철학의 표현으로 간주한다. UI는 시스템 구조를 시각적으로 표현하고 사용자의 의도를 구조화하는 창구다.
 
 ### **1. 기본 레이아웃 (Tri-State Layout)**
 *   **좌측 (The Navigator)**: **[프로젝트 폴더 - 세션]** 계층 구조. 프로젝트의 기억과 정책 범위를 상속받아 세션을 생성한다.
