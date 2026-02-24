@@ -45,6 +45,8 @@
 ### **4.3 Version Compatibility Gate [LOCK-15]**
 *   `min_runtime_version`을 통해 번들과 런타임 엔진 간의 버전 호환성을 엄격히 검증한다.
 
+※ 정책 정합성 위반(Guardian BLOCK)은 Safety Contract 위반으로 간주되지 않는다. 이는 실행 중단 사유가 아니라, 개입 요청 상태 전환 사유이다.
+
 ---
 
 ## **5. Session Pinning & Bundle Resolution**
@@ -64,10 +66,12 @@
 ### **6.2 Execution Hook (Guardian Layer)**
 *   **ExecutionPlan** 수준에서 실행 전/후 Validator Hook 호출.
 *   Core는 훅을 호출하고 결과(ALLOW/WARN/BLOCK)를 해석만 한다.
-*   Guardian은 정책 위반 신호를 생성할 수 있으나, 실행 차단의 최종 권한은 **Runtime Safety Contract**에 귀속된다.
+*   Guardian은 ALLOW / WARN / BLOCK 신호를 생성할 수 있다. 단, BLOCK은 자동 실행 차단을 의미하지 않는다.
+*   BLOCK은 “Intervention Required(추가 확인 필요)” 상태를 의미하며, Core는 이를 Human-in-the-loop 또는 명시적 override 승인 흐름으로 전환한다.
+*   실행을 기술적으로 차단(Fail-fast)할 수 있는 권한은 오직 **Runtime Safety Contract**(무결성, 해시, 버전 호환성 위반 등)에 한정된다.
 *   Retrieval Strategy와 다른 계층이다 (**Execution Layer**).
 
-Guardian Loop는 Execution Hook 계층이며 Retrieval Strategy와 구분된다. Retrieval은 데이터 선택 전략이고, Guardian은 실행 전/후 검증 훅이다. 정책은 BLOCK 신호를 생성할 수 있으나, 실제 실행 차단은 Core Safety Contract 범위 내에서만 허용된다.
+Guardian Loop는 Execution Hook 계층이며 Retrieval Strategy와 구분된다. Retrieval은 데이터 선택 전략이고, Guardian은 실행 전/후 검증 훅이다. Guardian의 BLOCK은 정책적 정합성 경고 수준의 개입 신호이며, Runtime Safety Contract 위반이 아닌 한 자동 실행 차단을 발생시키지 않는다.
 
 ---
 *Last Updated: 2026-02-24 (System Contract)*

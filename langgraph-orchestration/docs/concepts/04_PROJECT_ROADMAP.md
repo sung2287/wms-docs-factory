@@ -46,8 +46,20 @@
 - 상태: ✅ 완료
 
 #### Phase 6.5 – Core Extensibility & Execution Hook Refactor 🔵 계획
-- **목표**: ExecutionPlan에 validator/preflightHooks 확장 포인트 도입 및 Retrieval Strategy를 Port 기반으로 분리함.
-- **의미**: Guardian 및 도메인별 Memory Strategy를 Core 수정 없이 확장 가능하도록 구조를 개방한다. Execution Hook과 Data Strategy를 명확히 분리한다.
+
+- **PRD-021: Core Extensibility Patch**
+
+**목표:**
+- ExecutionPlan에 `validators[]` 또는 `preflightHooks[]` 확장 포인트 도입.
+- Guardian을 Step Type 추가 없이 Execution Hook 계층으로 삽입 가능하도록 구조 개방.
+- Retrieval Strategy를 `DecisionContextProviderPort` 기반 Strategy Injection 구조로 분리.
+- Memory Provider 선택을 정책/번들 기반으로 확장 가능하도록 DI(Dependency Injection) 구조 정비.
+
+**의미:**
+- Execution Layer(Guardian Hook)와 Data Layer(Retrieval Strategy)를 명확히 분리한다.
+- Core 수정 없이 도메인 팩 수준에서 Memory Strategy 및 정합성 검증 로직을 확장 가능하게 만든다.
+- 시스템을 “고정 토폴로지 엔진”에서 “확장 가능한 오케스트레이션 플랫폼”으로 진화시킨다.
+
 - 상태: ☐ 계획
 
 ---
@@ -56,7 +68,7 @@
 
 [01 Master Blueprint](./01_Master_Blueprint.md)에서 정의한 최종 상태와 현재 구현 사이의 주요 간극(Gap)을 정리한다.
 
-*   **Core Execution Hook 확장성**: Guardian 및 Validator를 ExecutionPlan 수준에서 삽입할 수 있는 구조 확장 필요.
+*   **Core Execution Hook 확장성 (PRD-021)**: Guardian 및 Validator를 ExecutionPlan 수준에서 삽입할 수 있는 구조 확장 필요. 현재 토폴로지는 단일 실행 노드 기반이며, Hook 기반 확장으로 전환해야 한다.
 *   **Anchor 자동화 (Semantic Memory Automation)**: 현재 Anchor는 수동 트리거 중심이며, 대화 중 자동으로 이정표를 감지하고 상기시키는 Letta 레이어의 통합이 미비함. (01 섹션 III-3 참조)
 *   **Agent Separation (조사-구현 분리)**: 아키텍처적으로 분리는 되어 있으나, 런타임에서 "근거 수집 전 구현 금지"와 같은 물리적 역할 강제가 아직 정책적으로만 존재함. (01 섹션 III-1 참조)
 *   **Multimodal 확장 (Schema Flexibility)**: 현재 엔진은 텍스트 중심이며, 이미지/오디오 등 다양한 입력과 출력 아티팩트를 처리할 수 있는 추상화 레이어가 필요함.
@@ -108,6 +120,7 @@
 | PRD-018 | Bundle Promotion Pipeline | COMPLETED | Phase 5.5 |
 | PRD-019 | Dev Mode Overlay | PLANNED | Phase 6A |
 | PRD-020 | Extensible Message Schema | PLANNED | Phase 9 |
+| PRD-021 | Core Extensibility Patch (Execution Hook & Strategy Port) | PLANNED | Phase 6.5 |
 
 ### **B. Definition of Done (DoD)**
 모든 단계는 [01 Master Blueprint](./01_Master_Blueprint.md)의 철학을 준수해야 하며, Core 수정 없이 번들/정책 수준에서 확장이 가능해야 함.
