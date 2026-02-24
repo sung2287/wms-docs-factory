@@ -255,8 +255,8 @@ Phase 6은 CLI 기반 UX 계약(세션/오버라이드 등)을 고정하며, Pha
 **Phase 6A는 Governance Layer 위에서 동작하며, 번들 무결성 및 세션 고정 규칙을 우회할 수 없다.**
 
 상태:
-- 🟡 **부분 완료 (PRD-013 ~ 016 완료)**
-- 🔵 **PRD-017 진행 예정 (NEXT MAIN)**
+- ✅ **완료 (PRD-013 ~ 017 완료)**
+- Phase 6A는 안정화 단계 진입
 
 ### Phase 6A PRD Expansion (React-based Stabilization)
 
@@ -279,11 +279,18 @@ Phase 6은 CLI 기반 UX 계약(세션/오버라이드 등)을 고정하며, Pha
 - **Pre-engine Hook**: 사용자 메시지 전송 시 `runRuntimeOnce` 호출 전 메타데이터 선제적 갱신
 - **Constraints Preserved**: Core-Zero-Mod 유지, `session_state` 스키마 보존, DTO 내 해시 필드 비노출
 
-#### PRD-017: Provider / Model / Domain UI Control (NEXT)
-- **UX-Only**: UX 레이어 전용 기능으로 구현하며, Core / Session schema / Bundle Governance 변경을 엄격히 금지한다.
-- **Hash-Aware**: PRD-012A의 결정론적 플랜 해시 구조를 전제로 작동한다.
-- **Session Restart**: 설정 오버라이드 시 자동 병합 대신 새 세션 유도 방식으로 처리한다.
-- **Scope**: 상단 상태 스트립 UI, 도메인/모델 설정 컨트롤, PRD-017 전용 툴팁 포함.
+#### PRD-017: Provider / Model / Domain UI Control ✅ COMPLETED (2026-02-24)
+- Provider / Model / Domain 상단 상태 스트립 UI 구현
+- request-scoped override 구조 적용 (Core 변경 없음)
+- freshSession 플래그 정상 전달 및 세션 회전 정책 연동
+- PLAN_HASH_MISMATCH 자동 회전 금지 (Fail-fast 유지)
+- Domain allowlist (global/runtime/wms/coding/ui) 서버 검증
+- "unset" sentinel은 runtime payload에서 완전 격리 (omit 보장)
+- Session schema 변경 없음
+- Bundle Governance / Plan Hash 계약 침해 없음
+- npm run typecheck PASS
+- npm test PASS
+- PRD close → delta → state promote 완료
 
 #### PRD-019: Dev Mode Overlay & Debug Projection
 ... (rest of planned PRDs)
@@ -319,6 +326,11 @@ Phase 6은 CLI 기반 UX 계약(세션/오버라이드 등)을 고정하며, Pha
 - `/` → Legacy UI (explicitly restored; 404 regression fixed)
 - `/v2` → React UI (primary UX direction)
 - **Parallel Serving Active**: Legacy and React co-exist during stabilization phase
+- **Provider/Model/Domain UI Override Active**
+- **Request-Scoped Override Only (No Session Schema Mutation)**
+- **Hash-Safe Fresh Session Rotation Integrated**
+- **Domain Allowlist Enforcement (Server-side)**
+- **"unset" Domain Sentinel Fully Isolated**
 - **REST/SSE Contracts**: Unchanged (GraphStateSnapshot projection-only)
 - **Unified Entry**: CLI & Web share `runRuntimeOnce`
 - **Session Query Enforcement**: All Web API calls include explicit `?session=` parameter
@@ -378,7 +390,7 @@ Phase 6은 CLI 기반 UX 계약(세션/오버라이드 등)을 고정하며, Pha
 
 ---
 
-# Current Mainline Baseline (2026-02-23)
+# Current Mainline Baseline (2026-02-24)
 
 - **Architecture Stable**: PRD-001부터 PRD-013까지 모든 설계 및 구현 동기화 완료.
 - **Contract Enforcement**: Executor와 Interpreter 간의 Step Contract v1.1 LOCK 및 결정론적 해시 검증 적용.
@@ -417,7 +429,7 @@ Phase 6은 CLI 기반 UX 계약(세션/오버라이드 등)을 고정하며, Pha
 | PRD-014 | Web UI Framework Introduction | COMPLETED | Phase 6A | React UI (/v2) active |
 | PRD-015 | Chat Timeline Rendering v2 | COMPLETED | Phase 6A | Deterministic Fake Streaming |
 | PRD-016 | Session Management Panel | COMPLETED | Phase 6A | 세션 UX |
-| PRD-017 | Provider/Model/Domain UI Control | PLANNED | Phase 6A | 설정 UI |
+| PRD-017 | Provider/Model/Domain UI Control | COMPLETED | Phase 6A | Hash-safe request-scoped override |
 | PRD-018 | Bundle Promotion Pipeline | COMPLETED | Phase 5.5 | 결정론적 런타임 거버넌스 확립 |
 | PRD-019 | Dev Mode Overlay | PLANNED | Phase 6A | 디버그 분리 |
 | PRD-020 | Extensible Message Schema | PLANNED | Phase 9 | 멀티모달 준비 |
@@ -492,10 +504,9 @@ Runtime은 일반 실행 흐름을 차단하지 않는다. 단, Bundle 무결성
 현재 시스템은 **"Chat-First UX Stabilization (Phase 6A)"**의 핵심 기능을 성공적으로 완료하고 **"Phase 6A 확장 단계"**로 진입한다.
 
 **Primary Focus:**
-- **PRD-017: Provider / Model / Domain UI Control (NEXT MAIN)**
-  - 상단 상태 스트립 UI (Provider/Model/Domain)
-  - 요청 단위 오버라이드 및 새 세션 유도 (PRD-012A 해시 인지)
-  - "unset" 도메인 처리 및 서버 SSOT 권한 유지
+- **Phase 6A Bug Fix & Contract Alignment (Web session listing contract stabilization)**
+
+**PRD-017 완료 상태로 이동.**
 
 **Environment Note:**
 - `run:web` manual smoke can fail in some sandbox environments due to EPERM port binding; tests/typecheck/ui:build passed.
@@ -505,7 +516,7 @@ Runtime은 일반 실행 흐름을 차단하지 않는다. 단, Bundle 무결성
   - 장기 기억 항해를 위한 앵커 감지 로직 설계 (UX 고도화 완료 후 재개)
 
 ---
-*Last Updated: 2026-02-23 (Post PRD-018 Governance Lock + Phase 6A Alignment)*
+*Last Updated: 2026-02-24 (Post PRD-017 Completion + State Promotion)*
 
 NOTE:
 policy/profiles/**/*.yaml 내 legacy step 명칭(recall, memory_write 등)은
