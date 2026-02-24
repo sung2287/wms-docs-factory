@@ -60,7 +60,9 @@
 *   **Guardian Loop [LOCK-5]**: 실행 전/후 Policy Memory 대조 Validator Hook.
     *   **ALLOW**: 통과
     *   **WARN**: UI 알림 후 진행
-    *   **BLOCK**: 중단 (안전 계약 위반 시)
+    *   **BLOCK**: 실행 중단은 번들 정책 위반이 아닌, Core 안전 계약(무결성, 호환성, 핀 위변조 등) 위반 시에만 허용된다. Guardian은 정책 정합성을 점검하는 레이어이며, 정책 자체가 Runtime을 임의로 차단하는 권한을 갖지 않는다.
+
+Guardian Loop는 정책 판단을 신호(ALLOW/WARN/BLOCK) 형태로 표현하지만, 실행 차단의 최종 권한은 Runtime Core의 Safety Contract에 귀속된다.
 
 ---
 *Last Updated: 2026-02-24 (System Contract)*

@@ -10,7 +10,8 @@
 
 *   **시스템의 실체**: 완벽한 결과물은 단일 AI의 지능이 아니라, 백엔드에 설계된 **'결정론적 메타 파이프라인(LangGraph)'**에서 나온다. 사용자는 대화만 하지만, 시스템은 의도를 정해진 스키마에 채워 넣어 세계관을 직조한다.
 *   **[LOCK-1] SSOT 분리 선언**: 승격(Promote)되는 대상은 오직 'Workflow Bundle(컨텍스트 스펙)'뿐이다. 유저 데이터(원문/기억/세션)는 번들과 물리적/논리적으로 완전히 격리된다.
-*   **Runtime의 본질**: 런타임은 기본적으로 실행기(Executor)이며 데이터 평면(Data Plane)이다. 시스템은 기본적으로 비차단(Non-blocking) 원칙을 고수한다. 정책은 실행을 제안하거나 경고할 수 있으나, Core가 아닌 정책이 직접 실행을 중단시키지 않는다. (상세 계약은 02 참조)
+*   **Runtime의 본질**: 런타임은 기본적으로 실행기(Executor)이며 데이터 평면(Data Plane)이다. 시스템은 기본적으로 비차단(Non-blocking) 원칙을 고수한다. 실행 차단은 번들 정책에 의해 발생하지 않으며, 오직 Runtime Core의 안전 계약(Fallback Contract) 범위 내에서만 제한적으로 허용된다. 정책은 실행을 제안하거나 경고할 수 있으나, Core가 아닌 정책이 직접 실행을 중단시키지 않는다. (상세 계약은 02 참조)
+    *   **비차단 원칙의 예외**: Runtime의 비차단 원칙은 “업무 실행 로직”에 적용된다. 단, 번들 무결성, 해시 불일치, 런타임-스키마 호환성 위반과 같은 Core 안전 계약 위반에 한해서는 즉시 Fail-fast를 허용한다. 이 예외는 정책 판단(Policy/Judge)과는 독립적이며, 번들 또는 정책이 실행 차단 권한을 갖는 것을 의미하지 않는다.
 *   **기억의 SSOT 정의**: 
     *   **Decision**: 의미(Meaning)의 SSOT이며, 운영 DB에 저장되는 버전 관리된 규칙이다.
     *   **Anchor**: 네비게이션 전용(Navigation-only) 힌트이다. (상세는 03 참조)
@@ -30,28 +31,41 @@
 
 ---
 
-## **III. Cognitive & Memory Architecture**
-
-단일 AI의 한계를 극복하기 위해 Planner-Worker 구조와 계층적 메모리 모델을 채택한다.
+## **III. Cognitive Architecture & Memory Model**
 
 *   **Planner-Worker & Judge**: 고성능 AI(디렉터)가 지시하고 가성비 AI(워커)가 증거를 수집하며, 판사 AI가 검수를 대행하는 구조이다.
-*   **3층 메모리 시스템 (Memory Hierarchy)**: 
-    *   **① Policy Memory (Invariant)**: 시스템 불변 규칙 (Decision).
-    *   **② Structural Memory (Relational)**: 개체 간 위계와 의존성 (Knowledge Graph).
-    *   **③ Semantic Memory (Context Recall)**: 유사 맥락 탐색 (Evidence/Anchor).
 
-### **🧠 Cognitive Hierarchy Declaration (NEW)**
+### **1. Cognitive Hierarchy (Top-Level Declaration)**
 
-본 시스템의 장기 기억은 단순 엔티티 저장 구조가 아니라, **계층적 인지 아키텍처(Cognitive Hierarchy)**를 따른다. 이는 AI가 의미를 처리하는 사고 순서를 구조적으로 강제하기 위한 설계다.
+본 시스템은 단순한 기억 저장 구조가 아니라, 계층적 인지 아키텍처(Cognitive Hierarchy)를 따른다. 이는 AI가 의미를 처리하는 사고 순서를 구조적으로 강제하기 위한 설계다.
 
-*   **① Policy Memory (Invariant Layer)**: 시스템의 불변 규칙 계층. Decision이 의미 SSOT로 위치하며, 설계 Drift 감지를 목적으로 한다. 실행 차단 권한은 없다. (상세는 02 참조)
-*   **② Structural Memory (Relational Layer)**: Decision 간 관계 및 의존성. Domain 기반 계층적 구조로서 영향 분석의 설계 지도가 된다. 텍스트가 아니라 “관계”를 기억한다.
-*   **③ Semantic Memory (Context Recall Layer)**: Evidence 원문 및 Anchor 네비게이션 힌트. 유사 맥락 탐색을 수행하며 상위 계층을 override할 수 없다.
+인지 계층은 다음과 같이 정의된다:
 
-#### **🔒 Memory Ordering Principle (LOCK)**
-의미 로딩은 반드시 다음 순서를 따른다: **Policy Layer → Structural Layer → Semantic Layer**. 하위 계층은 상위 계층을 우회하거나 무효화할 수 없다. (구현 세부는 03 참조)
+*   **① Policy Layer (Invariant)**: 시스템의 불변 규칙 계층. Decision이 의미 SSOT로 위치하며, 설계 Drift 감지를 목적으로 한다. 실행 차단 권한은 없다. (상세는 02 참조)
+*   **② Structural Memory (Relational Map)**: Decision 간 관계 및 의존성. Domain 기반 위계 구조로서 영향 분석의 설계 지도가 된다. 텍스트가 아니라 “관계”를 기억한다.
+*   **③ Semantic Memory (Context Recall)**: Evidence 원문 및 Anchor 네비게이션 힌트. 유사 맥락 탐색을 수행하며 상위 계층을 override할 수 없다.
 
-*   **Anchor의 역할**: Semantic 레이어에 속하는 네비게이션 힌트이며, 상위 메모리 계층의 로딩 규칙을 절대 우회하지 않는다. (상세는 03 참조)
+---
+
+### **2. Entity Mapping (Implementation Alignment)**
+
+인지 계층과 메모리 엔티티는 다음과 같이 매핑된다:
+
+*   **Decision** → Policy Layer
+*   **Decision 간 관계 / Scope** → Structural Layer
+*   **Evidence / Anchor** → Semantic Layer
+
+Anchor는 Semantic 계층에 속하는 네비게이션 힌트이며, 상위 계층의 로딩 규칙을 절대 우회하지 않는다. (구현 세부는 03 참조)
+
+---
+
+### **3. Memory Ordering Principle (LOCK)**
+
+의미 로딩은 반드시 다음 순서를 따른다:
+
+**Policy Layer → Structural Layer → Semantic Layer**
+
+하위 계층은 상위 계층을 우회하거나 무효화할 수 없다.
 
 ---
 
