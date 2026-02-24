@@ -33,16 +33,24 @@
 *   **global**: 모든 도메인에 적용.
 *   **domain (runtime, coding, wms, ui 등)**: 특정 영역에만 적용되는 Decision `scope` 필드와 매핑.
 
+### **3.3 Structural Layer (Impact Analysis) [LOCK]**
+*   **Relationship Graph**: 단순 Scope 필터링이 아니라, Decision 간 명시적 관계(예: DEPENDS_ON, CONSTRAINS, VALIDATES 등)를 그래프 구조로 표현하여 영향 범위(Blast Radius)를 계산한다.
+*   **Guardian Integration**: 이 계층은 Guardian Layer의 영향 분석(Impact Analysis)에 사용되며, 텍스트 유사도가 아닌 관계 기반 검증을 담당한다.
+
 ---
 
 ## **4. Retrieval Architecture**
 
 ### **4.1 Loading Order [LOCK]**
-1.  `global + axis` 로드 (전역 최우선)
-2.  `currentDomain + axis` 로드
-3.  `currentDomain + lock` 로드
-4.  `currentDomain + normal` 로드
-5.  Anchor → Evidence/Decision 탐색
+1.  **Policy Layer** 로드 (시스템 기본 원칙)
+2.  **Structural Layer** 로드 (명시적 관계 및 영향 분석)
+3.  `global + axis` 로드 (전역 최우선)
+4.  `currentDomain + axis` 로드
+5.  `currentDomain + lock` 로드
+6.  `currentDomain + normal` 로드
+7.  Anchor → Evidence/Decision 탐색
+
+Structural Layer는 Semantic Layer를 우회할 수 없으며, Structural 분석 결과는 Semantic 유사도 검색보다 우선된다.
 
 ### **4.2 Domain vs Phase Separation [LOCK]**
 *   **Phase (Execution Stage)**: 워크플로우 라우팅 제어 (design, implement 등).

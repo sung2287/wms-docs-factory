@@ -54,15 +54,20 @@
 
 ---
 
-## **6. Extension Points**
+## **6. Extension Points (Revised Structure)**
 
-*   **Strategy Injection [G]**: 번들을 통해 도메인 최적화된 리트리벌 전략과 검증 로직을 주입한다. (Core 수정 없이 확장)
-*   **Guardian Loop [LOCK-5]**: 실행 전/후 Policy Memory 대조 Validator Hook.
-    *   **ALLOW**: 통과
-    *   **WARN**: UI 알림 후 진행
-    *   **BLOCK**: 실행 중단은 번들 정책 위반이 아닌, Core 안전 계약(무결성, 호환성, 핀 위변조 등) 위반 시에만 허용된다. Guardian은 정책 정합성을 점검하는 레이어이며, 정책 자체가 Runtime을 임의로 차단하는 권한을 갖지 않는다.
+### **6.1 Retrieval Strategy Injection**
+*   **DecisionContextProviderPort** 기반 전략 주입.
+*   Hierarchical / Semantic / Hybrid 전략 교체 가능.
+*   **Data Selection Layer**에 해당하며, Execution Flow를 변경하지 않는다.
 
-Guardian Loop는 정책 판단을 신호(ALLOW/WARN/BLOCK) 형태로 표현하지만, 실행 차단의 최종 권한은 Runtime Core의 Safety Contract에 귀속된다.
+### **6.2 Execution Hook (Guardian Layer)**
+*   **ExecutionPlan** 수준에서 실행 전/후 Validator Hook 호출.
+*   Core는 훅을 호출하고 결과(ALLOW/WARN/BLOCK)를 해석만 한다.
+*   Guardian은 정책 위반 신호를 생성할 수 있으나, 실행 차단의 최종 권한은 **Runtime Safety Contract**에 귀속된다.
+*   Retrieval Strategy와 다른 계층이다 (**Execution Layer**).
+
+Guardian Loop는 Execution Hook 계층이며 Retrieval Strategy와 구분된다. Retrieval은 데이터 선택 전략이고, Guardian은 실행 전/후 검증 훅이다. 정책은 BLOCK 신호를 생성할 수 있으나, 실제 실행 차단은 Core Safety Contract 범위 내에서만 허용된다.
 
 ---
 *Last Updated: 2026-02-24 (System Contract)*

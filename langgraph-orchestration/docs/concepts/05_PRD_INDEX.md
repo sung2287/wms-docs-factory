@@ -16,21 +16,18 @@ PRD-013: Minimal Web UI(= CLI escape)
 PRD-014: Web UI Framework Introduction
 PRD-015: Chat Timeline Rendering v2
 PRD-016: Session Management Panel
+PRD-017: Provider / Model / Domain UI Control
+PRD-018: Bundle Promotion Pipeline
 
 [ IN-PROGRESS / MAIN ]
 
 [ PLANNED / MAIN ]
-PRD-017: Provider / Model / Domain UI Control
-- 상단 상태 스트립 UI
-- Provider / Model 선택 UI
-- Domain 전환 인터페이스
-- Server SSOT 유지
-
 PRD-019: Dev Mode Overlay & Debug Projection
 - Plan metadata Dev 표시
+PRD-020: Extensible Message Schema
+
 
 ### PRD-009 Deferred Note (Response Schema)
-
 
 The standardized LLM response schema (usage, meta) described in PRD-009 §3.1
 is intentionally deferred.
