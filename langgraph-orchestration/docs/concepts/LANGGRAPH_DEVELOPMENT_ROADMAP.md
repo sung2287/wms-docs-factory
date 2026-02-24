@@ -163,6 +163,66 @@ Decision은 SAVE_DECISION 확정 즉시 DB에 영구 저장되며, 저장된 Dec
 
 ---
 
+## Memory Architecture – 3-Layer Model (NEW)
+
+LangGraph의 장기 기억은 Summary 기반 시스템을 사용하지 않는다.
+대신 다음 3계층 Memory 모델을 따른다:
+
+### 1. Policy / Constraint Memory (Invariant Layer)
+
+- 구현 단위: Decision (versioned)
+- 역할: 시스템 불변 규칙 정의
+- strength: axis / lock / normal
+- 특징:
+  - 의미 SSOT
+  - 실행 차단 권한 없음
+  - 설계 Drift 감지 목적
+
+---
+
+### 2. Structural Memory (Relational Layer)
+
+- 구현 단위:
+  - Decision scope
+  - Decision 간 관계
+  - Evidence link
+  - Anchor 연결 구조
+- 역할:
+  - 개체 간 의존 관계 및 위계 구조 보존
+  - Domain 기반 계층적 Retrieval 유지
+- 특징:
+  - 텍스트가 아니라 관계를 기억
+  - Hierarchical Loading 규칙 준수
+
+---
+
+### 3. Semantic Memory (Context Recall Layer)
+
+- 구현 단위:
+  - Evidence 원문
+  - Letta Anchor
+- 역할:
+  - 유사 맥락 탐색
+  - 과거 작업 상기
+- 특징:
+  - Anchor는 네비게이션 힌트
+  - Decision 계층을 우회하지 않음
+  - Policy 우선순위를 override할 수 없음
+
+---
+
+### Memory Ordering Principle (LOCK)
+
+Retrieval 순서:
+
+1) Policy Layer (axis)
+2) Structural Layer (domain strength)
+3) Semantic Layer (anchor/evidence)
+
+Semantic Memory는 Policy/Structural을 override할 수 없다.
+
+---
+
 ## Phase 4 – Reserved (Deferred)
 
 의미:

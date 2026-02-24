@@ -63,6 +63,11 @@ Anchor는 네비게이션 힌트이며 아래 원칙을 따른다:
 - **Anchor는 원문을 대체하지 않는다**: 상세 내용은 반드시 Evidence나 Decision 원문을 참조해야 한다.
 - **Anchor는 이정표다**: 특정 맥락에서 Evidence 또는 Decision이 존재하는 위치를 가리키는 메타데이터 역할만 수행한다.
 
+"Anchor는 Semantic Memory Layer에 속하며,
+Structural/Policy Layer를 절대 우회하지 않는다.
+Anchor는 네비게이션 힌트일 뿐이며,
+Decision Hierarchical Loading 규칙을 변경할 수 없다."
+
 ### Memory 통합 구조와의 관계
 
 LangGraph의 장기 메모리 타입은 다음 3종으로 제한한다:

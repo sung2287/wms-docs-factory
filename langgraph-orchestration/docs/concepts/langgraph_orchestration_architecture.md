@@ -109,6 +109,15 @@ LangGraph는 결정의 맥락(Meaning)을 보존하는 데 집중하며, Decisio
 - Git에 자동 저장되지 않는다.
 - versioned 방식으로 변경 이력을 유지한다.
 
+LangGraph는 3층 Memory 모델을 따른다:
+
+- Policy Layer (Decision)
+- Structural Layer (Relational Scope)
+- Semantic Layer (Anchor/Evidence)
+
+이 계층 구조는 Core Runtime의 Domain-neutral 원칙과 충돌하지 않으며,
+Memory 전략은 Adapter/Policy 레벨에서 확장된다.
+
 ---
 
 ## 7. Mode Decision Boundary
