@@ -45,22 +45,28 @@
 - 실시간 스트리밍 렌더링 및 UI Observer를 통해 사용자 경험을 안정화함.
 - 상태: ✅ 완료
 
-#### Phase 6.5 – Core Extensibility & Execution Hook Refactor 🔵 계획
+#### Phase 6.5 – Core Extensibility & Execution Hook Refactor ✅ 완료
 
 - **PRD-021: Core Extensibility Patch**
 
-**목표:**
-- ExecutionPlan에 `validators[]` 또는 `preflightHooks[]` 확장 포인트 도입.
+**구현:**
+- ExecutionPlan에 `validators[]`, `postValidators[]` 확장 포인트 도입.
 - Guardian을 Step Type 추가 없이 Execution Hook 계층으로 삽입 가능하도록 구조 개방.
 - Retrieval Strategy를 `DecisionContextProviderPort` 기반 Strategy Injection 구조로 분리.
 - Memory Provider 선택을 정책/번들 기반으로 확장 가능하도록 DI(Dependency Injection) 구조 정비.
 
-**의미:**
-- Execution Layer(Guardian Hook)와 Data Layer(Retrieval Strategy)를 명확히 분리한다.
-- Core 수정 없이 도메인 팩 수준에서 Memory Strategy 및 정합성 검증 로직을 확장 가능하게 만든다.
-- 시스템을 “고정 토폴로지 엔진”에서 “확장 가능한 오케스트레이션 플랫폼”으로 진화시킨다.
+### 완료 내용 요약
+- Execution Hook (`validators[]`, `postValidators[]`) 구조 도입
+- Validator Signature 기반 Deterministic Plan Hash 통합 (PRD-012A 정합 유지)
+- Strategy Port (`DecisionContextProviderPort`) 도입
+- BundlePinV1에 `strategy_provider_id`, `memory_provider_id` 고정
+- Memory Loading Order(Core Merge Logic) 불변 유지 (PRD-005 보호)
+- Step Contract LOCK(PRD-007) 침해 없음
+- 기존 PRD-001~018 전면 회귀 테스트 통과
 
-- 상태: ☐ 계획
+**의미:**
+- Core가 "고정 토폴로지 엔진"에서 "확장 가능한 오케스트레이션 플랫폼"으로 진화 완료.
+- 이후 Phase 7/8은 해당 확장 포인트를 실제로 사용하는 단계임.
 
 ---
 
@@ -68,7 +74,10 @@
 
 [01 Master Blueprint](./01_Master_Blueprint.md)에서 정의한 최종 상태와 현재 구현 사이의 주요 간극(Gap)을 정리한다.
 
-*   **Core Execution Hook 확장성 (PRD-021)**: Guardian 및 Validator를 ExecutionPlan 수준에서 삽입할 수 있는 구조 확장 필요. 현재 토폴로지는 단일 실행 노드 기반이며, Hook 기반 확장으로 전환해야 한다.
+*   **Core Execution Hook 확장성 (PRD-021)**: ✅ 해결 완료.
+    - Execution Hook 구조 도입 및 Strategy Port 분리 완료.
+    - Guardian 및 Retrieval 확장 준비 상태 확보.
+    - 실제 기능 구현은 Phase 7/8에서 진행.
 *   **Anchor 자동화 (Semantic Memory Automation)**: 현재 Anchor는 수동 트리거 중심이며, 대화 중 자동으로 이정표를 감지하고 상기시키는 Letta 레이어의 통합이 미비함. (01 섹션 III-3 참조)
 *   **Agent Separation (조사-구현 분리)**: 아키텍처적으로 분리는 되어 있으나, 런타임에서 "근거 수집 전 구현 금지"와 같은 물리적 역할 강제가 아직 정책적으로만 존재함. (01 섹션 III-1 참조)
 *   **Multimodal 확장 (Schema Flexibility)**: 현재 엔진은 텍스트 중심이며, 이미지/오디오 등 다양한 입력과 출력 아티팩트를 처리할 수 있는 추상화 레이어가 필요함.
@@ -79,15 +88,53 @@
 
 ## **III. Path to Blueprint Completion (확장 단계)**
 
-### **1. Phase 7 – 인지 지능 고도화 (Letta Anchor 연동) 🔵 계획**
+### **1. Phase 7 — Governance Enforcement & Guardian Automation (통제권 확보) 🔵 계획**
+
+#### PRD-022: Guardian 실제 구현 검수 로봇 가동 (통제권 확보)
+- **목표**: 
+  - PRD-021로 열린 Execution Hook을 실제로 사용하여, “정책 위반/충돌/위험”을 자동 검수하고 `InterventionRequired`를 일으키는 Guardian 실행기를 도입한다.
+  - Core가 아닌 Domain Pack/Policy Layer에서 “검수 권한”을 행사하게 하여 시스템 통제권을 확보한다.
+- **핵심 산출물**: 
+  - Guardian Validator 구현체 (Execution Hook에 꽂히는 signature-based validator)
+  - 검수 리포트 포맷 (근거/라인/권고/차단여부) + Evidence 저장소 연동
+  - Intervention UX 트리거 (단, StepResult 불변 유지)
+- **LOCK (불변 조건)**: 
+  - StepResult mutation 금지 (PRD-007)
+  - Guardian BLOCK은 자동 실행 차단 아님 (InterventionRequired로만 전환)
+  - Plan Hash/Bundle Pin 무결성 유지 (PRD-012A/PRD-018)
+- **Acceptance Criteria**: 
+  - 동일 입력에서 Guardian 결과가 결정론적으로 재현 가능 (validator signature/logic_hash 포함)
+  - BLOCK 발생 시 InterventionRequired로 전환되고 Resume 경로 정상 작동 확인
+  - 기존 PRD-001~018 실행 경로에 대한 회귀 테스트 통과
+
+### **2. Phase 8 — Retrieval Intelligence Upgrade (지능 강화) 🔵 계획**
+
+#### PRD-023: Retrieval Strategy 검색 품질 고도화 (지능 강화)
+- **목표**: 
+  - PRD-021의 Strategy Port를 실제 활용하여, Decision/Evidence 검색의 품질을 단계적으로 강화한다.
+  - 단, PRD-005의 계층 순서(Policy→Structural→Semantic)와 Core Merge Logic을 절대 훼손하지 않는다.
+- **핵심 산출물**: 
+  - Semantic/Hybrid Strategy 구현 (Storage Access 교체 및 최적화)
+  - 품질 평가 루브릭/벤치마크 (Precision/Recall/Latency) 및 회귀 테스트 셋
+  - 전략 선택이 Bundle/Pin에 고정되는 운영 경로 확립 (PRD-018 일관성 유지)
+- **LOCK (불변 조건)**: 
+  - Memory Loading Order 유지 (PRD-005: Policy → Structural → Semantic)
+  - Merge Logic은 Core 유지 (전략은 Storage Access만 담당)
+  - Strategy/Provider 선택은 Bundle/Pin에 고정 (PRD-018 무결성)
+- **Acceptance Criteria**: 
+  - Default(기존 SQL) 대비 검색 품질 지표(RAG Precision 등) 개선 근거 제시
+  - 전략 교체 시 Core 수정 불필요 확인 (Port 기반 Injection 검증)
+  - Pin/Hash 재현성 유지 및 모든 기존 테스트 케이스 통과
+
+### **3. Phase 9 – 인지 지능 고도화 (Letta Anchor 연동) 🔵 계획**
 *   **목표**: 대화 압축 중 Anchor 자동 감지 및 Retrieval 시 원문 확인 강제 워크플로우 구현.
 *   **의미**: "기억하는 수석 아키텍트"로서의 인지 뼈대 완성. (상세는 [03 MEMORY MODEL](./03_MEMORY_MODEL.md) 참조)
 
-### **2. Phase 8 – 에이전틱 거버넌스 확립 (Agent Separation) 🔵 계획**
+### **4. Phase 10 – 에이전틱 거버넌스 확립 (Agent Separation) 🔵 계획**
 *   **목표**: Research(Gemini)와 Implementation(Codex)의 물리적 역할 분리 및 근거 기반 승인 루프 강제.
 *   **의미**: 추측에 의한 구현을 차단하고 설계 정합성을 수호하는 시스템 신뢰도 확보.
 
-### **3. Phase 9 – 멀티모달 및 범용 인터페이스 🔵 계획**
+### **5. Phase 11 – 멀티모달 및 범용 인터페이스 🔵 계획**
 *   **목표**: `InputEvent` 및 `Output Artifact` 추상화, 멀티모달 지원 메시지 스키마 도입.
 *   **의미**: 도메인 중립성을 넘어 인터페이스 중립성을 확보하여 범용 오케스트레이터로 진화.
 
@@ -119,11 +166,13 @@
 | PRD-017 | Provider/Model/Domain UI Control | COMPLETED | Phase 6A |
 | PRD-018 | Bundle Promotion Pipeline | COMPLETED | Phase 5.5 |
 | PRD-019 | Dev Mode Overlay | PLANNED | Phase 6A |
-| PRD-020 | Extensible Message Schema | PLANNED | Phase 9 |
-| PRD-021 | Core Extensibility Patch (Execution Hook & Strategy Port) | PLANNED | Phase 6.5 |
+| PRD-020 | Extensible Message Schema | PLANNED | Phase 11 |
+| PRD-021 | Core Extensibility Patch (Execution Hook & Strategy Port) | COMPLETED | Phase 6.5 |
+| PRD-022 | Guardian Enforcement Robot | PLANNED | Phase 7 |
+| PRD-023 | Retrieval Intelligence Upgrade | PLANNED | Phase 8 |
 
 ### **B. Definition of Done (DoD)**
 모든 단계는 [01 Master Blueprint](./01_Master_Blueprint.md)의 철학을 준수해야 하며, Core 수정 없이 번들/정책 수준에서 확장이 가능해야 함.
 
 ---
-*Last Updated: 2026-02-24 (Evolutionary Path Roadmap)*
+*Last Updated: 2026-02-24 (PRD-021 Completed — Extensibility Platform Ready)*

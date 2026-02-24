@@ -50,6 +50,8 @@ Execution Hook은 기존 ExecutionPlan Step Contract (PRD-007)를 절대 침해�
 - Hook의 반환 타입은 `{ status: "ALLOW" | "WARN" | "BLOCK", reason: string, evidenceRefs?: string[] }`으로 제한된다.
 - Core는 Hook 결과를 해석하여 `state.intervention = { required: true, reasons: [...] }`를 생성하거나, Runtime Safety Contract 위반 시 Fail-fast만 수행할 수 있다.
 - Hook은 StepResult를 변경하는 “Side Channel State Transition”을 생성할 수 없다.
+- **Hook은 StepResult에 대한 Read-only View만 접근할 수 있으며, 객체를 직접 참조/수정하거나 새로운 Result Payload를 생성할 수 없다.**
+- **Intervention 신호는 StepResult와 분리된 상태 채널에만 기록된다.**
 
 #### 🔒 3.1.2 Deterministic Hash Integration (LOCK)
 ExecutionPlan에 `validators[]` / `postValidators[]` 필드가 추가되는 경우:
@@ -57,6 +59,15 @@ ExecutionPlan에 `validators[]` / `postValidators[]` 필드가 추가되는 경�
 - 단, 함수 참조가 아닌 Validator Signature(`validator_id`, `validator_version`, `config_hash`, `policy_ref`) 기반으로 포함한다.
 - 동일한 Execution 의미가 변경되었음에도 Hash가 유지되는 상황은 허용되지 않는다.
 - Hash에서 Validator를 제외하는 경우, 그 근거와 의미 불변성 논리를 문서화해야 한다.
+- **Validator 구현은 반드시 `validator_version` 또는 `logic_hash` 필드를 가져야 하며, 이는 stableStringify 대상에 포함되어야 한다.**
+- **실행 의미(Validation Logic)가 변경되었으나 Signature가 동일한 상태는 허용되지 않으며, Validator는 순수 데이터(signature) 기반 정의만 허용된다. (런타임 외부 로직 참조 금지)**
+
+#### 🔒 3.1.3 Intervention State Definition (LOCK)
+InterventionRequired 상태는 Execution 실패 상태가 아니다.
+- `status = "InterventionRequired"`는 Error 상태와 구분된다.
+- Session Persistence(PRD-004) 구조를 변경하지 않는다.
+- Intervention 상태는 기존 Session Pin 및 Hash 구조에 영향을 주지 않는다.
+- Resume 시 기존 Plan을 재실행하며 StepResult를 변형하지 않는다.
 
 ---
 
@@ -78,6 +89,15 @@ Retrieval Strategy 선택은 Runtime 임의 DI에 의해 결정되지 않는다.
 - Bundle이 Promote된 이후 Strategy 구현은 변경될 수 없다.
 - Pin된 Session은 동일한 Strategy 환경에서 재현 가능해야 한다.
 - Runtime은 Port를 통해 구현체를 resolve할 수 있으나, 선택 권한은 Bundle 단위에 귀속된다. (PRD-018 Bundle-as-a-Unit 원칙 준수)
+- **Strategy/Memory Provider ID는 BundlePinV1 또는 Bundle Manifest에 명시적으로 저장되어야 하며, Pin 구조에 해당 필드가 없을 경우 Strategy Injection은 허용되지 않는다.**
+
+#### 🔒 3.2.2 Memory Ordering Preservation (LOCK)
+Retrieval Strategy는 PRD-005의 Memory Loading Order를 변경할 수 없다.
+- Policy Layer → Structural Layer → Semantic Layer 순서를 유지해야 한다.
+- Strategy 교체는 데이터 선택 방식(Data Selection Strategy)만 변경할 수 있다.
+- 상위 계층을 우회하거나, 하위 계층이 상위 계층을 override하는 구조는 허용되지 않는다.
+- **`DecisionContextProviderPort`는 Retrieval Storage 접근을 추상화하는 계층이며, Hierarchical Merge Logic (Axis → Lock → Normal) 및 Scope Resolution 알고리즘은 Core에서 유지되어야 한다.**
+- **Strategy 교체는 Storage 접근 방식(SQL / Vector / Hybrid)을 변경할 수 있으나, 알고리즘 전체 교체는 본 PRD 범위에 포함되지 않는다.**
 
 ---
 
