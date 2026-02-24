@@ -31,6 +31,7 @@
 * **목적:** 대중(99%)이 사용하는 단순하고 직관적인 대화형 UI (엔진은 도메인 입력→실행→결과/상태 반환 역할만 수행).  
 * **오토파일럿 (Prod Mode) \[LOCK-2\]:** 런타임 환경에서는 인간의 개입(HITL)이 단순히 '꺼지는' 것이 아니라, **'승인/검수의 주체'를 판사 AI(Judge Policy)로 대체**하는 것이다.  
 * **🔥 \[LOCK-4\] 코어 강제 규칙 (Core-enforced Fallback):** Judge Policy의 구체적인 '판단 기준'은 번들에 포함되어 배포되지만, 판단 실패, 보류, 불확실성 발생 시의 처리 구조(재시도/에스컬레이션/중단)는 반드시 Runtime Core에 하드코딩된 Fallback Contract를 따르도록 강제한다. (설계자의 위험한 자동화 정책 배포로 인한 시스템 붕괴 원천 차단)
+* **🔥 \[LOCK-5\] 가디언 루프 (Guardian/Validator Loop):** Runtime Core는 실행 전/후에 Policy Memory를 대조하는 Validator Hook을 강제로 실행한다. 이 검사는 **ALLOW(통과), WARN(UI 알림 후 진행), BLOCK(중단)**의 3단계 신호를 반환하며, 시스템 무결성을 실시간으로 수호한다.
 
 ## **3\. 백엔드 에이전틱 워크플로우 (Planner-Worker 구조)**
 
@@ -39,6 +40,12 @@
 * **디렉터(판사) 노드:** 가장 똑똑한 AI(고비용). 전체 숲을 보며 설계도를 검토하고 워커에게 "이 부분 충돌 없는지 조사해 와" 지시.  
 * **워커(수사관) 노드:** 가성비 AI. 방대한 레포지토리를 뒤져 증거를 수집하고 요약 리포트만 바침.  
 * **Letta 장기 기억 (앵커):** 어둠 속(원문 DB)을 비추는 '손전등'. 현재 대화의 맥락을 이해하고 원문 DB의 세계관과 맵핑.
+
+### **3.1 인지 뼈대: 3층 메모리 시스템 (Memory Hierarchy)**
+
+*   **① Semantic Memory (맥락):** 유사한 과거 대화 및 자산 검색 (RAG/Letta Anchor).
+*   **② Structural Memory (관계):** 개체 간 위계와 의존성 파악 (Knowledge Graph). "A를 고치면 B가 깨지는가?"를 판단하는 설계의 지도.
+*   **③ Policy Memory (규칙):** 절대 변해서는 안 되는 Invariant(불변성). 번들로 주입된 정책(Bundle/Policy)이 여기서 강제됨.
 
 ## **4\. 기억과 과금의 헌법 (Memory & BM Constitution)**
 
@@ -90,6 +97,7 @@ Builder에서 Runtime으로 승격(Promote)되는 manifest.json의 핵심 구조
   * prod: 판사 AI 승인 주체화 (auto\_approver).  
 * **E. 관측 및 상태 (Telemetry):** 연료 게이지 UX를 위한 상태 이벤트 정의.  
 * **F. 롤백 및 안전장치:** previous\_bundle\_ref 또는 rollback\_to.
+* **G. 확장성 포트 (Strategy Injection):** 번들은 단순히 프롬프트만 담는 게 아니라, 해당 도메인에 최적화된 **'리트리벌 전략(Retrieval Strategy)'**과 **'검증 로직(Validator)'**을 런타임에 주입한다. 이를 통해 Core 수정 없이도 도메인별로 각기 다른 3층 메모리 운용 방식이 결정된다.
 
 ## **9\. Future Extension (장기 확장 로드맵)**
 
