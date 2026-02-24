@@ -39,6 +39,18 @@
     *   **① Policy Memory (Invariant)**: 시스템 불변 규칙 (Decision).
     *   **② Structural Memory (Relational)**: 개체 간 위계와 의존성 (Knowledge Graph).
     *   **③ Semantic Memory (Context Recall)**: 유사 맥락 탐색 (Evidence/Anchor).
+
+### **🧠 Cognitive Hierarchy Declaration (NEW)**
+
+본 시스템의 장기 기억은 단순 엔티티 저장 구조가 아니라, **계층적 인지 아키텍처(Cognitive Hierarchy)**를 따른다. 이는 AI가 의미를 처리하는 사고 순서를 구조적으로 강제하기 위한 설계다.
+
+*   **① Policy Memory (Invariant Layer)**: 시스템의 불변 규칙 계층. Decision이 의미 SSOT로 위치하며, 설계 Drift 감지를 목적으로 한다. 실행 차단 권한은 없다. (상세는 02 참조)
+*   **② Structural Memory (Relational Layer)**: Decision 간 관계 및 의존성. Domain 기반 계층적 구조로서 영향 분석의 설계 지도가 된다. 텍스트가 아니라 “관계”를 기억한다.
+*   **③ Semantic Memory (Context Recall Layer)**: Evidence 원문 및 Anchor 네비게이션 힌트. 유사 맥락 탐색을 수행하며 상위 계층을 override할 수 없다.
+
+#### **🔒 Memory Ordering Principle (LOCK)**
+의미 로딩은 반드시 다음 순서를 따른다: **Policy Layer → Structural Layer → Semantic Layer**. 하위 계층은 상위 계층을 우회하거나 무효화할 수 없다. (구현 세부는 03 참조)
+
 *   **Anchor의 역할**: Semantic 레이어에 속하는 네비게이션 힌트이며, 상위 메모리 계층의 로딩 규칙을 절대 우회하지 않는다. (상세는 03 참조)
 
 ---
