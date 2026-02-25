@@ -50,7 +50,16 @@ Runtime Core -> [TelemetryEmitter] -> Deep-copy Snapshot -> [SSE/WebSocket] -> D
 ## 4. Hash Watch Flow
 1. **Core**: `ExecutionPlan` 생성 시 해시 계산.
 2. **Emitter**: 현재 세션의 `bundle_pin_hash`와 `current_plan_hash`를 스냅샷으로 전송.
-3. **Overlay**: 두 값이 다를 경우 UI에 'Mismatch' 경고 및 JSON Diff 도구 활성화.
+3. Diff Comparison Specification
+
+- 단순 JSON diff는 허용되지 않는다.
+- 구조 비교는 다음 단위로 수행되어야 한다:
+    - Step execution order
+    - Step type chain
+    - Validator / PostValidator sequence
+    - Retrieval source signature (Decision/Evidence ID set)
+    - Bundle pin hash vs current plan hash
+- 의미 없는 필드 차이는 표시하지 않는다 (timestamp, UI-only metadata 제외).
 
 ---
 

@@ -12,11 +12,36 @@
 *   **[LOCK-1] SSOT 분리 선언**: 승격(Promote)되는 대상은 오직 'Workflow Bundle(컨텍스트 스펙)'뿐이다. 유저 데이터(원문/기억/세션)는 번들과 물리적/논리적으로 완전히 격리된다.
 *   **Runtime의 본질**: 런타임은 기본적으로 실행기(Executor)이며 데이터 평면(Data Plane)이다. 시스템은 기본적으로 비차단(Non-blocking) 원칙을 고수한다. 실행 차단은 번들 정책에 의해 발생하지 않으며, 오직 Runtime Core의 안전 계약(Fallback Contract) 범위 내에서만 제한적으로 허용된다. 정책은 실행을 제안하거나 경고할 수 있으나, Core가 아닌 정책이 직접 실행을 중단시키지 않는다. (상세 계약은 02 참조)
     *   **비차단 원칙의 예외**: Runtime의 비차단 원칙은 “업무 실행 로직”에 적용된다. 단, 번들 무결성, 해시 불일치, 런타임-스키마 호환성 위반과 같은 Core 안전 계약 위반에 한해서는 즉시 Fail-fast를 허용한다. 이 예외는 정책 판단(Policy/Judge)과는 독립적이며, 번들 또는 정책이 실행 차단 권한을 갖는 것을 의미하지 않는다.
+
+### **Guardian Loop Latency Budget Principle (Non-blocking Compatibility)**
+
+Runtime은 비차단(Non-blocking)을 원칙으로 하며, Guardian Loop는 무결성 보장을 위한 수호 레이어이다. 따라서 Guardian Loop의 검증은 다음과 같이 2계층으로 분리되어야 한다:
+
+- **Synchronous (Critical Core Checks)**: 번들 무결성, 해시 불일치, 런타임-스키마 호환성 등 Core-enforced Fallback 범위의 위반만 동기 검사로 처리한다. 위반 시 Fail-fast를 허용한다.
+- **Asynchronous (Policy/Heuristic Checks)**: 정책 정합성 평가, 위험도 추정, 사후 감사 준비 등은 비동기 처리로 분리되며, Runtime의 기본 실행 흐름을 차단하지 않는다.
+
+이 분리는 철학적 선택이 아니라 "비차단 원칙"을 보존하기 위한 구조적 계약으로 간주한다.
 *   **기억의 SSOT 정의**: 
     *   **Decision**: 의미(Meaning)의 SSOT이며, 운영 DB에 저장되는 버전 관리된 규칙이다.
     *   **Anchor**: 네비게이션 전용(Navigation-only) 힌트이다. (상세는 03 참조)
 *   **The Fuel Gauge Principle**: 엔진의 복잡한 내부는 은닉하되, AI의 기억 선명도와 판단 근거는 투명하게 노출하여 사용자에게 통제감을 부여한다. (상세는 IV 섹션 참조)
 *   **윤리적 방어망**: 우리는 관계나 글쓰기를 파는 것이 아니라, '의사결정 증폭기'로서 사고의 흔적을 관리하고 결정을 내리기 쉽게 돕는 도구를 제공한다.
+
+본 시스템의 장기 전략은 "결정론적 메타 파이프라인"을 실행 엔진에 국한하지 않고, 결정의 흔적(Decision Trace)을 관리하는 구조로 확장하는 것이다. 그러나 이는 철학 변경이 아니라, 기존 Decision SSOT 선언의 자연스러운 확장으로 간주된다.
+
+### **Identity Evolution Declaration (Explicit Strategic Positioning)**
+
+본 시스템은 단기적으로는 전문가가 재사용 가능한 Workflow Bundle을 설계·수익화하는 **Worker OS**로 기능한다.
+
+그러나 장기적으로는 Decision을 의미 SSOT로 선언한 현재 구조를 확장하여, 실행 단위의 Decision Trace를 관리하는 **AI Decision Infrastructure**로 진화할 수 있는 잠재력을 내재한다.
+
+이 진화는 철학의 변경이 아니라, "결정론적 메타 파이프라인" 선언의 구조적 확장으로 간주된다.
+
+- 단기 포지셔닝: Expert Workflow Bundle 기반 생산성 OS
+- 중기 확장: 검증된 Bundle 경제 및 기업 배포 모델
+- 장기 잠재력: Decision Trace 및 Execution Evidence 관리 인프라
+
+위 선언은 Blueprint의 상위 철학을 침해하지 않으며, Decision SSOT 원칙과 비차단 Runtime 원칙을 유지한 채 확장 가능성을 명시하는 전략적 포지셔닝이다.
 
 ---
 
@@ -28,6 +53,14 @@
 *   **Workflow Bundle**: 프롬프트, 정책, 루브릭을 하나로 묶은 배포 단위이다.
 *   **Core-enforced Fallback**: 정책의 판단이 실패하거나 불확실할 때, 시스템은 정책이 아닌 Core의 안전 계약을 따른다.
 *   **Guardian Loop**: 실행 전/후에 정책 정합성을 점검하여 시스템 무결성을 실시간으로 수호한다. (상세는 02 참조)
+
+### **Builder Adoption Strategy (1% 설계자 UX 장벽 완화)**
+
+Builder는 1%의 설계자가 Workflow Bundle을 제작·테스트·승격하는 Control Plane이다. 그러나 초기 시장 진입에서 설계 UX의 난이도는 핵심 리스크이므로, 다음의 전략을 전제로 한다:
+
+- 초기에는 개발팀이 **1st Party Bundles(공식 번들)**을 직접 제작하여 템플릿/패턴 라이브러리를 축적한다.
+- Builder는 점진적으로 **No-code/Low-code 노드 연결** 또는 템플릿 기반 편집 UX를 제공하여 설계자의 진입 장벽을 낮춘다.
+- 이 과정은 Core를 바꾸지 않으며, 번들 제작 경험을 자산화하여 생태계를 확장하기 위한 제품 전략이다.
 
 ---
 
@@ -67,6 +100,17 @@ Anchor는 Semantic 계층에 속하는 네비게이션 힌트이며, 상위 계�
 
 하위 계층은 상위 계층을 우회하거나 무효화할 수 없다.
 
+### **ExecutionReceipt as Structural Memory Trace (Forward-Compatible Concept)**
+
+Decision이 의미의 SSOT라면, ExecutionReceipt는 실행 단위의 해시 기반 참조 영수증이다.
+
+- 원문 데이터 저장을 확대하지 않는다.
+- 해시 기반 참조 구조를 유지한다.
+- Receipt는 Core를 복잡하게 만들지 않는다.
+- 확장 필드는 Extension Block 구조로만 수용한다.
+
+이는 Phase 3 확장을 위한 구조적 슬롯일 뿐, 현재 Runtime의 비차단 원칙이나 Policy Layer를 변경하지 않는다.
+
 ---
 
 ## **IV. Product Surface (UI/UX as Structural Expression)**
@@ -84,5 +128,40 @@ UI는 단순 프론트엔드 설계가 아니라, LangGraph의 구조 철학이 
 *   **전문가 → 대중 확장**: 전문가용 런타임에서 정교한 '정책'과 '관계' 데이터를 수집하여 번들을 고도화하고, 이를 대중용 비서 엔진으로 이식하여 '딸깍' 수준의 품질을 보장한다.
 *   **글로벌 확장**: 코어 수정 없이 도메인별/국가별 전용 '번들'을 제작하여 배포하는 전략을 취한다. (상세는 04 참조)
 
+### **AI Worker OS → Decision Infrastructure Evolution Path (Strategic Intent)**
+
+본 블루프린트는 단순한 저술 SaaS 아키텍처를 넘어서, 전문가 워커 OS에서 시작하여 AI Decision Infrastructure로 진화할 수 있는 구조적 잠재력을 내재한다.
+
+이 진화는 기능 확장이 아니라, 기존 Cognitive Architecture와 Decision SSOT 구조의 확장적 적용이다.
+
+#### Phase 1 — Expert Worker OS
+- 전문가가 재사용 가능한 Workflow Bundle을 설계하고 수익화한다.
+- Runtime은 실행기(Executor)로서 비차단 원칙을 유지한다.
+- Bundle Pinning과 Decision Versioning은 자산화의 기반이 된다.
+
+#### Phase 2 — Verified Bundle Economy
+- 사고율 낮은 번들 선별
+- Risk 메타데이터 축적
+- Stable/Canary 분리
+- 기업 배포 모델 확립
+
+#### Phase 3 — Decision Evidence Infrastructure
+- ExecutionReceipt 기반 실행 영수증 체계
+- Decision 변경 체인 추적
+- Immutable Audit Artifact 계층 형성
+- 기업 감사/GRC 시스템 연동 가능 구조 확보
+
+이 진화 경로는 Core 철학을 변경하지 않는다. 오히려 Decision을 의미 SSOT로 선언한 현재 구조의 필연적 확장이다.
+
+### **Versioning & Backward Compatibility Principle (SSOT Separation Compatible)**
+
+[LOCK-1]의 SSOT 분리 원칙을 유지하면서도, 번들/정책 진화로 인한 사용자 데이터 혼란을 방지하기 위해 다음의 원칙을 전제로 한다:
+
+- Workflow Bundle과 Policy/Decision 변경은 **엄격한 버전 체계(예: Semantic Versioning)**를 따른다.
+- 사용자의 프로젝트/세션은 기본적으로 **Bundle Pinning(고정)** 상태를 유지하며, 업그레이드는 사용자 선택(Opt-in)으로 처리한다.
+- 업그레이드가 필요한 경우에도, 런타임은 과거 세션의 원문/기억을 "번들에 맞춰 강제 변환"하는 방식이 아니라, **호환 계층(Compatibility Layer) 또는 별도 마이그레이션 툴링**을 통해 단계적으로 처리한다.
+
+이 원칙은 Version Drift를 통제하면서도, 99% 사용자의 지속 사용성을 보장하기 위한 제품/운영 규범이다.
+
 ---
-*Last Updated: 2026-02-24 (Philosophy Anchor)*
+*Last Updated: 2026-02-25 (Philosophy Anchor + Feedback Hardening: Latency/Builder/Versioning)*

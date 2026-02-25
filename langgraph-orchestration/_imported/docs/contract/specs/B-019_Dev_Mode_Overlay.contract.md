@@ -12,6 +12,14 @@
 - **Invariant**: 텔레메트리 데이터 스트림은 실행 엔진의 상태를 변경할 수 없다.
 - **Mandate**: 반드시 **Deep-copy Snapshot**만 전송하며, 원본 GraphState/ExecutionPlan에 대한 참조를 외부에 노출해서는 안 된다.
 
+### 2.1 Snapshot Structural Sanitization LOCK
+
+- Snapshot은 반드시 Plain JSON 객체로 직렬화되어야 한다.
+- Prototype chain, Getter, Setter, Function reference, Proxy는 포함될 수 없다.
+- Class instance는 JSON-safe object로 변환되어야 한다.
+- Snapshot 객체는 전송 전 Object.freeze() 처리되어야 한다.
+- 원본 GraphState, ExecutionPlan에 대한 참조는 절대 노출되어서는 안 된다.
+
 ## 3. Reproducibility Isolation LOCK
 - **Purpose**: Dev 기능을 Prod 환경으로부터 물리적으로 격리한다.
 - **Invariant**: Dev Override 상태에서는 다음 기능이 비활성화된다.
@@ -20,6 +28,13 @@
     - **`state:cycle`**, **`prd:close`** 경로 차단 (운영 상태 전이 방지)
 - **UI Mandate**: 오버레이 활성 시 "NON-REPRODUCIBLE (DEV MODE)" 경고를 모든 화면에 오버레이한다.
 - **Failure Mode**: LOCK 상태에서 해당 명령 수신 시 `ActionNotAllowedError` 발생.
+
+### 3.1 Session-Scoped Override LOCK
+
+- Dev Override 상태는 반드시 `sessionId` 단위로 격리되어야 한다.
+- Global Override 상태는 허용되지 않는다.
+- 하나의 세션에서 활성화된 Override는 다른 세션의 Promote/Pin/Cycle 경로에 영향을 줄 수 없다.
+- OverrideGuard는 모든 요청에서 `request.sessionId` 기반으로 판단해야 한다.
 
 ## 4. Secret Zero-Logging LOCK
 - **Purpose**: 로깅 및 디버깅 과정에서의 의도치 않은 시크릿 유출을 원천 차단한다.

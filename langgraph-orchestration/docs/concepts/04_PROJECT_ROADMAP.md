@@ -138,6 +138,71 @@
 *   **목표**: `InputEvent` 및 `Output Artifact` 추상화, 멀티모달 지원 메시지 스키마 도입.
 *   **의미**: 도메인 중립성을 넘어 인터페이스 중립성을 확보하여 범용 오케스트레이터로 진화.
 
+### **6. Phase 12 – Infrastructure Forward-Slot Preparation 🔵 계획**
+
+이 단계는 기능 구현 단계가 아니다.
+확장 불가능성을 제거하기 위한 구조 정비 단계이다.
+
+---
+
+## ✅ Phase 12-A — Structural Safety Seal (Completed)
+
+**상태:** ✅ Completed (2026-02-25)
+
+**핵심 결과:**
+- Seal-A/B/C/D 구조적 경계 봉인 확정
+- Guardian Sync/Async Split 구현 완료
+- Policy BLOCK → Non-blocking + Core-driven intervention
+- HookClass 기반 분기 체계 도입
+- 실행 흐름 제어 권한은 Safety Hook에만 허용
+
+**구조적 의미:**
+Runtime Core는 이제 Governance Signal과 Execution Flow를 명확히 분리하며, 정책 위반은 실행 중단이 아닌 개입 신호로 처리된다. 이는 Non-blocking 원칙을 코드 레벨에서 완전히 고정한 상태이다.
+
+### 1. ExecutionReceipt Canonical Schema 확정 ✅
+- Core Fields 고정
+- Extension Block 구조 유지
+- Flow Control 권한 없음 명시
+
+### 2. Bundle Pinning + Version Chain 안정화 ✅
+- Bundle Version 고정 원칙 유지
+- Decision Version overwrite 금지 원칙 유지
+- Semantic Versioning 운영 선언
+
+### 3. Guardian Layer Isolation 완전 명문화 ✅
+- Retrieval 개입 금지
+- GraphState mutation 금지
+- Sync/Async 분리 유지
+
+### 4. Structural Graph Boundary 확정 ✅
+- Impact Analysis 범위 제한
+- Cycle Safety 원칙 유지
+
+#### PRD-024: Structural Safety Seal (Contract Hardening Only) ✅
+
+본 PRD는 기능 구현을 추가하지 않는다. Core 구조를 봉인(Seal)하기 위한 계약 문서이다.
+
+**구현 내용:**
+- Seal-C Sync/Async Split 구현 완료
+- HookClass 기반 분기 도입 (SAFETY / POLICY)
+- POLICY BLOCK은 Non-blocking + Core-driven intervention 방식으로 확정
+- execution_plan_hash에 HookClass 포함 → 결정론 유지
+- state_delta 승격 완료
+
+목표:
+Core를 절대 수정하지 않고도 Phase 3 인프라 확장이 “가능한 상태”를 확보 완료.
+
+---
+
+## 🟡 Phase 12-B — Deferred (Post Product-Market Fit)
+
+다음 항목은 제품 안정화 및 생태계 형성 이후 진행한다.
+
+- Provenance / Policy Snapshot / Computed Risk 슬롯 예약 유지
+- Export Hook 인터페이스 계약 명시 (비동기 처리 전제)
+- Physical AI 확장 필드 예약 (device_id, sensor refs 등)
+- Semantic Versioning 운영 원칙 선언 (Bundle/Decision 계층)
+
 ---
 
 ## **Appendix**
@@ -170,9 +235,10 @@
 | PRD-021 | Core Extensibility Patch (Execution Hook & Strategy Port) | COMPLETED | Phase 6.5 |
 | PRD-022 | Guardian Enforcement Robot | PLANNED | Phase 7 |
 | PRD-023 | Retrieval Intelligence Upgrade | PLANNED | Phase 8 |
+| PRD-024 | Phase 12-A Structural Safety Seal | COMPLETED | Phase 12-A |
 
 ### **B. Definition of Done (DoD)**
 모든 단계는 [01 Master Blueprint](./01_Master_Blueprint.md)의 철학을 준수해야 하며, Core 수정 없이 번들/정책 수준에서 확장이 가능해야 함.
 
 ---
-*Last Updated: 2026-02-24 (PRD-021 Completed — Extensibility Platform Ready)*
+*Last Updated: 2026-02-25 (PRD-024 Structural Safety Seal Added)*
