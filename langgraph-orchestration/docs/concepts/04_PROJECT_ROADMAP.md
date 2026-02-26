@@ -311,3 +311,18 @@
 
 ---
 *Last Updated: 2026-02-26 (PRD-025~028 추가 / Atlas Index Engine PRD-026 Phase 7 선행 배치 / WorkItem 범위 PRD-025 통합 명시 / PRD-028 Deferred 슬롯 예약 / 번들 전략 로드맵 IV 섹션 추가 / 전략 컨텍스트 추가)*
+
+---
+
+## Phase-8 (Operational Hardening – Deferred)
+
+다음 항목들은 기능 완성 이후 운영 안정성 강화를 위해 재검토할 사항이다:
+
+- Atlas ensureInitial 동시성 제어 (Advisory Lock 도입 여부)
+- Atlas Stale 장기 누적 감시 및 자동 복구 전략
+- 대규모 레포지토리 스캔 성능 스트레스 테스트
+- Snapshot 재빌드 오케스트레이션 전략
+
+본 항목은 현재 기능 설계를 변경하지 않으며,
+운영 하드닝 단계에서만 다룬다.
+
