@@ -80,6 +80,19 @@ Builder는 1%의 설계자가 Workflow Bundle을 제작·테스트·승격하는
 
 ---
 
+### Decision Origination Contract (Forward-Compatible Declaration)
+
+Decision은 외부 입력(대화, API 호출, 시스템 이벤트 등)으로부터
+구조화된 Capture Layer를 통해 생성된다.
+
+이 Capture Layer는 Decision을 직접 저장하지 않으며,
+구조화된 Proposal 단계를 거쳐 Memory SSOT 규칙에 따라 Commit된다.
+
+이 선언은 Decision SSOT 철학을 변경하지 않으며,
+Decision Trace 인프라 확장의 출발 지점을 명시하기 위한 구조적 슬롯이다.
+
+---
+
 ### **2. Entity Mapping (Implementation Alignment)**
 
 인지 계층과 메모리 엔티티는 다음과 같이 매핑된다:

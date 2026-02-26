@@ -12,6 +12,20 @@
 
 ---
 
+### DecisionProposal Status Declaration
+
+DecisionProposal은 Memory Entity가 아니다.
+
+- DecisionProposal은 영구 저장 대상이 아니다.
+- Commit 이전의 Proposal은 Runtime 레벨의 임시 객체로 간주된다.
+- Version Chain은 Commit 시점에만 생성된다.
+- Proposal은 overwrite 또는 Memory SSOT를 우회할 수 없다.
+
+LOCK:
+Proposal 단계는 Decision SSOT를 대체할 수 없다.
+
+---
+
 ## **2. Decision Versioning & Persistence**
 
 *   **Persistence [LOCK]**: SAVE_DECISION 선택 즉시 DB(SQLite v1)에 영구 저장된다. 세션 종료 시까지 대기하지 않는다.

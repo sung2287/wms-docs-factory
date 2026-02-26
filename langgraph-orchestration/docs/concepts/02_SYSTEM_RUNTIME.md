@@ -60,6 +60,25 @@ LOCK:
 
 ---
 
+### Decision Capture Layer Boundary Contract
+
+Decision Capture Layer는 Execution Flow의 일부가 아니다.
+
+이는 Conversation Pre-processing Layer에 속하며,
+Runtime Core의 Safety Contract,
+Execution Hook 계층,
+Guardian Layer와 구조적으로 분리된다.
+
+- Capture Layer는 GraphState를 mutate하지 않는다.
+- Capture Layer는 ExecutionPlan을 변경하지 않는다.
+- Capture Layer는 Runtime Safety Contract의 대상이 아니다.
+- Capture Layer는 Execution Latency Budget에 영향을 주지 않도록 설계되어야 한다.
+
+LOCK:
+Decision Capture는 Execution Layer로 승격될 수 없다.
+
+---
+
 ## **2. Builder ↔ Runtime ↔ Promotion 구조**
 
 *   **Builder (Control Plane)**: 아키텍트가 UI로 파이프라인 설계, HITL 테스트 수행, manifest.json 포함 **Workflow Bundle** 생성.
