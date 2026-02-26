@@ -23,7 +23,11 @@
 
 ## 2. Atlas Snapshot Contract
 
-- **snapshotId Creation Rule**: `bundlePin`과 `repoRef`를 기반으로 고유한 `snapshotId`를 생성하며, 이는 전체 Atlas 인덱스의 상태를 식별하는 고유 키로 사용된다.
+- **SnapshotId Creation Rule (Reinforced)**:
+  - `snapshotId`는 반드시 `compositeHash`를 기반으로 결정론적으로 생성되어야 한다.
+  - 동일한 `compositeHash`가 생성되는 경우, `snapshotId` 또한 동일해야 한다.
+  - `snapshotId`는 시간(createdAt), 세션 ID, 환경 변수 등 비결정적 요소에 의존해서는 안 된다.
+  - `bundlePin` 및 `repoRef`는 snapshotId의 의미적 식별자 역할을 할 수 있으나, snapshotId의 최종 값은 `compositeHash`로부터 파생되어야 한다.
 - **compositeHash Boundary**: `repoStructureHash`와 `decisionStateHash`를 결합하여 계산하며, 동일한 레포지토리와 Pin 조건에서 동일한 해시 결과가 보장되어야 한다.
 - **Deterministic Requirement**: 4대 인덱스의 필드가 동일한 경우 `compositeHash`는 100% 결정론적으로 재현 가능해야 한다.
 
