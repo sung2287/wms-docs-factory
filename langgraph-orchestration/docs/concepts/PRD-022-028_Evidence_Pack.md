@@ -1,6 +1,6 @@
 PRD-023~028 Evidence Pack (Repo 조사 기반 요약)
 
-> ⚠ PRD-025 & PRD-026 Finalized Decisions are now treated as architectural invariants.
+> PRD-025 and PRD-026 are now CLOSED and treated as architectural invariants.
 > Subsequent PRD-022/023/027/028 설계 시 이 항목들은 재검증 대상이 아니다.
 > Atlas Snapshot Determinism, Budget FailFast Classification, and Decision-Loop Isolation are now architectural invariants.
 > ⚠ Concurrency, Default Allowlist Policy, and Stale Accumulation require Phase-8 hardening confirmation but do not invalidate PRD-026 invariants.
@@ -11,7 +11,7 @@ Cycle End SSOT는 PersistSession Step: Atlas 갱신/스냅샷 커밋의 기준�
 
 Atlas 저장은 SQLite 신규 테이블이 안전 축: 파일 SSOT는 원자성 깨짐 위험이 큼.
 
-Plan Hash(PRD-012A)와 Atlas Hash는 완전 분리: Atlas 해시를 plan hash 입력에 넣으면 철학/UX 충돌이 큼.
+Plan Hash(PRD-012A)와 Atlas Hash와 완전 분리: Atlas 해시를 plan hash 입력에 넣으면 철학/UX 충돌이 큼.
 
 (Exit Criteria 상에서도 PRD-026은 Atlas 4대 인덱스 + cycle 종료 갱신 + budget enforcer + deterministic 재현을 요구함. 
 
@@ -62,8 +62,54 @@ src/adapter/storage/sqlite/sqlite.stores.ts : DecisionStore/EvidenceStore + crea
 
 조사 결과: root별 active 단일 보장(UNIQUE WHERE is_active=1), 트랜잭션(BEGIN/COMMIT), evidence link(M:N) 구조.
 
+### 0.1 Minimum Engine Completion Set
+다음 3개 PRD가 엔진의 최소 작동 세트(Core Set)를 구성한다.
+- **PRD-026 CLOSED**
+- **PRD-025 CLOSED** (DESIGN_CONFIRMED까지)
+- **PRD-022 CLOSED** (Guardian Enforcement Layer implemented 2026-02-27)
+
 2) PRD별 “구현 시 필요한 근거” 요약
 PRD-026 Atlas Index Engine (선행 기반)
+--- (중략) ---
+### 🔵 PRD-022 — Guardian Enforcement Layer (Engine Core Set)
+
+**Status: CLOSED (2026-02-27)**
+
+**Implementation Confirmed By:**
+- ValidatorFinding 타입 도입
+- runValidators → policyFindings 반환 구조 확정
+- executePlan → intervention.reasons append-only 추출
+- persistSession → cycle-end evidence 저장 전용
+- Determinism integration test 통과 (logic_hash 기반)
+
+**Role**
+- Execution Hook 기반 안전 검증 레이어
+- Decision/WorkItem 상태 변경 트리거 금지 (단방향 조회만 허용)
+- InterventionRequired 신호 생성 전용
+
+**Dependency Alignment**
+- Atlas 조회는 PRD-026 API만 사용
+- Decision Commit은 PRD-025 Enforcer 경로만 사용
+- Atlas → Decision/WorkItem 역방향 트리거 금지 (LOCK-C 준수)
+
+**Structural Coupling with PRD-025**
+- STRONG/LOCK 충돌 시 자동 Commit 금지
+- Guardian은 DecisionProposal 단계에서 개입 가능
+- StepResult mutation 금지
+- PlanHash + logic_hash 기반 결정론적 재현 보장
+
+### 2.x Guardian Deterministic Invariant (Locked)
+
+- 동일 ExecutionPlan + 동일 validator signature → 동일 validatorFindings 생성
+- stale conflict downgrade 규칙은 deterministic해야 함
+- validatorFindings는 GraphState에 append-only로 유지
+- Plan Hash에 Guardian 결과 포함 금지
+
+**Invariant Alignment (PRD-025 & PRD-022)**
+- PRD-025 Invariants (INV-4: Evidence Integrity, INV-7: Version Immutability)는 PRD-022의 Hook Contract와 상호 보완적이다.
+- Guardian은 Hook 시점에서 INV-7을 준수하여 기존 상태를 변조하지 않으며, 위반 발견 시 INV-4에 따라 Evidence 기반 Intervention을 생성한다.
+
+PRD-023 Retrieval Intelligence Upgrade (PRD-026 완료 후)
 
 Exit Criteria(핵심 6개):
 
@@ -110,7 +156,7 @@ Budget Enforcer 근거:
 
 PRD-025 Decision Capture Layer + WorkItem + Completion Policy (후행)
 
-(Exit Criteria 요약은 PRD-025 항목 참고: proposal 자동 생성, 옵션 B 저장정책, evidenceRefs/changeReason 없으면 commit 거부, 버전 체인/active 포인터 이동, WorkItem 상태 전이 강제, STRONG/LOCK 충돌 시 자동 commit 금지. 
+(Exit Criteria 요약은 PRD-025 항목 참고: proposal 자동 생성, 옵션 B 저장정책, evidenceRefs/changeReason 없으면 commit 거부, 버전 체인/active 포인터 이동, WorkItem 상태 전이 가드, STRONG/LOCK 충돌 시 자동 commit 금지. 
 
 EXIT_CRITERIA_PRD023-028
 
@@ -124,7 +170,7 @@ DecisionVersion 체인 생성/active 전환: sqlite.stores.ts의 원자적 버�
 
 Evidence link(M:N): decision_evidence_links (FK 강제)
 
-WorkItem 상태 전이 강제는 PRD-025 범위(향후 PRD-027로 VERIFIED 확장)
+WorkItem 상태 전이 가드는 PRD-025 범위(향후 PRD-027로 VERIFIED 확장)
 
 PRD-026과의 결합 근거
 
@@ -378,6 +424,40 @@ PRD-026의 LOCK 구조를 변경하지 않는다.
   idx_work_items_decision_id (work_items.decision_id)
   idx_work_item_transitions_work_item_id (work_item_transitions.work_item_id)
 
+### 6.9 Structured Reason Contract (Non-Negotiable)
+
+- 모든 Decision Commit은 구조화된 reason 객체를 반드시 포함해야 한다.
+- reason이 없으면 Commit은 BLOCK(InterventionRequired) 처리된다.
+- reason은 단순 문자열이 아니라 최소 구조를 가진다.
+
+최소 스키마(v1):
+
+reason = {
+  type: "CONSISTENCY" | "RISK" | "SECURITY" | "PERFORMANCE" | "UX" | "MAINTAINABILITY" | "OTHER",
+  summary: string,
+  tradeoff?: string,
+  evidenceRefs?: string[]
+}
+
+LOCK:
+- reason.summary는 trim 후 빈 문자열 불가
+- reason.type은 enum 외 값 금지
+- DecisionVersion은 reason을 SSOT로 영속 저장해야 한다
+- Atlas는 reason 내용을 SSOT로 저장하지 않는다 (파생 인덱스 원자가 유지)
+
+> These decisions are now locked post-implementation and validated by integration tests (commit 75c6aef).
+
+## 6.x Engine Core Set 확정
+
+현재 Engine Core Set은 다음 3개 PRD로 구성된다:
+
+- PRD-026 Atlas Index Engine
+- PRD-025 Decision Capture Layer (DESIGN_CONFIRMED까지)
+- PRD-022 Guardian Enforcement Layer
+
+이 3개는 상호 구조적으로 연결되며,
+이후 PRD-023/027/028 설계 시 전제 조건으로 간주한다.
+
 4) 다음 설계 채팅에서 바로 쓰는 “핵심 논점 체크리스트”
 
 **PRD-022/027/028 설계 시 아래 PRD-025/026 확정 사항을 직접 참조할 것:**
@@ -397,3 +477,143 @@ PRD-025/027의 VERIFIED 판정 근거는 Atlas(Conflict/Contract 상태) + Evide
 WorkItem은 반드시 Decision Version UUID(id)에 바인딩한다 (root_id 금지)
 
 Decision Commit + WorkItem 생성은 단일 원자적 트랜잭션으로 처리한다
+
+Evidence Pack Updated — PRD-022 integrated into Engine Core Set (2026-02-27)
+
+---
+
+# 🔒 7) Cross-PRD Common Contract (PRD-023 / PRD-027 / PRD-028)
+
+이 섹션은 PRD-023, PRD-027, PRD-028 동시설계를 가능하게 하기 위한
+공통 계약(Shared Interface Contract)을 정의한다.
+
+이 계약은 기존 PRD-025/026 Finalized Decisions를 수정하지 않으며,
+추가적인 상호 침범을 방지하기 위한 경계 정의다.
+
+---
+
+## 7.1 Retrieval Output Contract (PRD-023 Boundary)
+
+PRD-023은 검색 품질을 개선할 수 있으나,
+출력 스키마를 변경해서는 안 된다.
+
+### RetrievalResultV1 (Locked Shape)
+
+{
+  decisions: DecisionVersion[],
+  evidence: EvidenceRecord[],
+  anchors?: AnchorRecord[],
+  conflictPoints?: ConflictPoint[],
+  metadata: {
+    strategy: string,
+    latency_ms?: number
+  }
+}
+
+LOCK:
+
+- 필드 삭제 금지
+- 필드 의미 변경 금지
+- PlanHash 입력에 Retrieval 결과 포함 금지
+- Strategy 교체는 Bundle/Pin 단에서만 허용
+
+PRD-023은 내용 품질(정밀도/재현율)만 개선 가능하며,
+shape 변경은 금지한다.
+
+---
+
+## 7.2 Completion Policy Interface (PRD-027 Boundary)
+
+PRD-027은 WorkItem VERIFIED 판정을 담당한다.
+
+CompletionPolicyV1은 다음 입력만 사용할 수 있다:
+
+{
+  workItem: WorkItem,
+  decision: DecisionVersion,
+  guardianFindings: ValidatorFinding[],
+  atlasState: {
+    conflictClear: boolean,
+    contractClear: boolean
+  },
+  evidence: EvidenceRecord[]
+}
+
+LOCK:
+
+- CompletionPolicy는 Decision 또는 WorkItem을 직접 수정할 수 없다.
+- CompletionPolicy는 Atlas를 직접 갱신할 수 없다.
+- CompletionPolicy는 Retrieval을 강제 호출할 수 없다.
+- 반환값은 다음으로 제한된다:
+
+{
+  status: "ALLOW" | "REQUIRE_CONFIRMATION" | "BLOCK",
+  reason: string
+}
+
+VERIFIED 상태 전이는 Enforcer 계층에서만 수행한다.
+
+---
+
+## 7.3 Evidence Sufficiency Rule (PRD-028 Boundary)
+
+PRD-028은 Evidence의 "충분성 정의"를 외부화한다.
+
+EvidenceSufficiencyV1:
+
+{
+  minEvidenceCount: number,
+  requiredTypes?: string[],
+  allowExternalRefs?: boolean
+}
+
+LOCK:
+
+- Evidence 충분성 기준은 Domain Pack에서만 정의한다.
+- Core는 기준을 해석하지 않고 집행만 한다.
+- EvidenceRecord는 append-only 원칙 유지.
+- Evidence 변경이 Atlas를 자동 변경해서는 안 된다.
+
+---
+
+## 7.4 Dependency Direction Lock
+
+의존 방향은 다음과 같이 고정한다:
+
+PRD-028 (Evidence Rule)
+        ↓
+PRD-027 (Completion Policy)
+        ↓
+PRD-023 (Retrieval Improvement)
+
+금지 방향:
+
+- Retrieval → Completion 자동 트리거 금지
+- Atlas → WorkItem 자동 변경 금지
+- Completion → Atlas 직접 수정 금지
+
+---
+
+## 7.5 Determinism Preservation Rule
+
+다음은 반드시 유지되어야 한다:
+
+- 동일 ExecutionPlan + 동일 Pin → 동일 Completion 결과
+- Retrieval 전략 변경은 Bundle 교체 시에만 발생
+- CompletionPolicy는 시간 기반 값(Date.now 등) 사용 금지
+- Random 값 사용 금지
+- AtlasHash는 PlanHash와 분리 유지
+
+---
+
+## 7.6 Stale Handling Policy Alignment
+
+Atlas가 Stale 상태일 경우:
+
+- CompletionPolicy는 VERIFIED 자동 승인 금지
+- REQUIRE_CONFIRMATION으로 downgrade 가능
+- FailFast(BudgetExceededError)는 Completion 흐름에 포함되지 않는다
+
+---
+
+END OF SECTION

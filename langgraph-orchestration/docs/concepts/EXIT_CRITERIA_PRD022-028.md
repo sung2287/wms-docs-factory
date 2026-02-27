@@ -19,22 +19,27 @@
 
 **→ 6개 통과 시 PRD-026 CLOSED**
 
+> **Status: CLOSED (2026-02-27)**  
+> All 6 criteria verified via runtime tests and deterministic hash checks.
+
 ---
 
 ## 🔵 PRD-025 — Decision Capture Layer
-> **역할**: 대화 → Decision 자동화. WorkItem MVP 포함.
-> ⚠️ VERIFIED 자동 판정은 이 PRD 범위에 포함하지 않는다.
+> **역할**: 대화 → Decision 자동화.
+> ⚠️ WorkItem, completion_policy, VERIFIED 판정은 PRD-027 범위이다.
 
 | # | 종료 조건 | 비고 |
 |:--|:--|:--|
-| 1 | 대화 Turn에서 DecisionProposal 자동 생성 확인 | conversationTurnRef 포함 필수 |
+| 1 | DecisionProposal 자동 생성 확인 | conversationTurnRef 포함 필수 |
 | 2 | 옵션 B 저장 정책 정상 작동 | 저장 제안 → 사용자 YES → Committed 전환 |
-| 3 | evidenceRefs / changeReason 없으면 Commit 거부 | Enforcer 강제 규칙 확인 |
-| 4 | DecisionVersion 새 버전 생성 + active 포인터 이동 확인 | overwrite 금지 |
-| 5 | WorkItem 상태 전이 강제 확인 | PROPOSED → ANALYZING → DESIGN_CONFIRMED, 임의 점프 불가 |
-| 6 | STRONG / LOCK 충돌 가능성 있는 Proposal 자동 Commit 금지 확인 | Guardian 이전 SSOT 오염 방지 — 충돌 강도 분류 기반 차단 테스트 통과 |
+| 3 | reason + 루트 evidenceRefs 검증 Gate 작동 | Enforcer 강제 규칙 확인 |
+| 4 | 검증 실패 시 InterventionRequired 발생 | BLOCK 정책 확인 |
+| 5 | DecisionVersion 새 버전 생성 + active 포인터 이동 확인 | overwrite 금지 |
 
-**→ 6개 통과 시 PRD-025 CLOSED (VERIFIED 자동 판정은 이후 별도)**
+**→ 5개 통과 시 PRD-025 CLOSED**
+
+> **Status: CLOSED (2026-02-27)**  
+> WorkItem 및 VERIFIED 로직은 PRD-027 범위로 이관됨.
 
 ---
 
@@ -72,14 +77,14 @@
 ---
 
 ## 🔵 PRD-027 — WorkItem Completion & VERIFIED 판정
-> **역할**: VERIFIED 자동 판정 + completion_policy 전체 구현.
+> **역할**: WorkItem v1 실체(테이블 + 상태머신), completion_policy evaluator, VERIFIED 전이 로직.
 > ⚠️ 코딩 번들 온보딩 후 실사용 데이터가 쌓인 시점에 시작. PRD-025 완료 후 진행.
 
 | # | 종료 조건 | 비고 |
 |:--|:--|:--|
-| 1 | completion_policy 평가기 정상 작동 | Domain Pack 기반 완료 조건 평가 |
-| 2 | VERIFIED 자동 판정 작동 확인 | auto_verify_allowed=true 케이스 |
-| 3 | VERIFIED 수동 판정 흐름 작동 확인 | auto_verify_allowed=false → 사용자 확인 |
+| 1 | WorkItem v1 엔티티 및 상태머신 구현 확인 | PROPOSED → ANALYZING → DESIGN_CONFIRMED → IMPLEMENTING → IMPLEMENTED → VERIFIED → CLOSED |
+| 2 | completion_policy 평가기 정상 작동 | Domain Pack 기반 완료 조건 평가 |
+| 3 | VERIFIED 자동 판정 작동 확인 | auto_verify_allowed=true 케이스 |
 | 4 | WorkItem IMPLEMENTED → VERIFIED → CLOSED 전이 강제 확인 | 임의 점프 불가 |
 | 5 | 코딩 도메인 completion_policy 기준 실제 케이스 통과 | 테스트 Evidence + Conflict 클리어 + Contract Lock 위반 없음 |
 
@@ -139,4 +144,4 @@ PRD-028은 두 번째 도메인 진입 시점에 시작.
 
 ---
 
-*작성일: 2026-02-26 | 출처: GPT Exit Criteria 분석 + Claude 스프린트 구조 통합 | PRD-027/028 추가 | GPT 4개 보강 패치 적용*
+*작성일: 2026-02-27 | PRD-025/026 CLOSED 반영*

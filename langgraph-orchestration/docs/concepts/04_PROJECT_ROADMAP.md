@@ -60,23 +60,32 @@
 ## **II. Blueprint Gap Analysis (청사진 대비 부족 요소)**
 
 - **Core Execution Hook 확장성 (PRD-021)**: ✅ 해결 완료.
-- **Atlas Index Engine**: ✅ 설계 완료. PRD-026으로 등록. Phase 7 선행 조건으로 배치.
-- **Decision Capture Layer**: ✅ 설계 완료 (2026-02-26). PRD-025로 등록. WorkItem/completion_policy 평가 포함.
+- **Atlas Index Engine**: ✅ 구현 완료 (PRD-026).
+- **Decision Capture Layer**: ✅ 구현 완료 (PRD-025).
 - **Anchor 자동화 (Semantic Memory Automation)**: Letta 레이어 통합 미비. Phase 9에서 구현 예정.
 - **Agent Separation (조사-구현 분리)**: 정책적으로만 존재. Phase 10에서 물리적 강제 구현 예정.
 - **Multimodal 확장 (Schema Flexibility)**: 텍스트 중심 현재 엔진. Phase 11에서 추상화 레이어 도입 예정.
 - **Domain Pack 확장 (Metafactory Expansion)**: 도메인 팩 라이브러리 부재. PRD-028 슬롯 예약, 코딩 번들 검증 후 확장 예정.
 - **Platformization (SaaS Scale-up)**: 멀티 테넌트, Stable/Canary 채널 등 플랫폼 기능 미완성.
 
+## 🔒 Minimum Engine Completion Set (Core Operational Ready)
+
+- PRD-026 — CLOSED
+- PRD-025 — CLOSED (DESIGN_CONFIRMED까지)
+- PRD-022 — CLOSED (2026-02-27)
+
 ---
 
 ## **III. Path to Blueprint Completion (확장 단계)**
 
-### **1. Phase 7 — Atlas Index Engine + Guardian Automation 🔵 계획**
+### **1. Phase 7 — Atlas Index Engine + Guardian Automation**
 
-#### PRD-026: Atlas Index Engine (Index Build/Update + Partial Scan Budget Enforcer) *(2026-02-26 신규 추가)*
+#### PRD-026: Atlas Index Engine
+**상태: ✅ COMPLETED (2026-02-27)**
 
-> **배경**: PRD-022(Guardian), PRD-023(Retrieval), PRD-025(Capture Layer) 세 개가 모두 Atlas를 읽고 쓰는 구조인데, Atlas 자체를 생성·갱신·조회하는 엔진이 PRD로 존재하지 않았다. 이 PRD가 없으면 세 개의 상위 PRD가 "무엇을 어디서 읽을지"를 체계적으로 공유하지 못한다. Phase 7의 선행 조건이다.
+- Atlas 4대 인덱스 생성/갱신/조회 엔진 구현 완료
+- Cycle-End 갱신 + Budget Enforcer + Deterministic Snapshot 확정
+- Plan Hash와 Atlas Hash 완전 분리 유지
 
 - **목표**:
   - Atlas Index(Structure / Contract / ConflictPoints / DecisionIndex) 생성·갱신·조회 엔진 구현
@@ -101,44 +110,51 @@
   - Domain Pack scan_budget 초과 요청 시 Enforcer가 차단 확인
   - PRD-022/023/025가 Atlas 조회 API를 통해 정상 동작 확인
 
----
-
-#### PRD-022: Guardian 실제 구현 검수 로봇 가동
-- **목표**: Execution Hook을 실제로 사용하여 정책 위반/충돌/위험을 자동 검수하고 `InterventionRequired`를 발생시키는 Guardian 실행기 도입.
-- **핵심 산출물**:
-  - Guardian Validator 구현체 (signature-based validator)
-  - 검수 리포트 포맷 + Evidence 저장소 연동
-  - Intervention UX 트리거 (StepResult 불변 유지)
-- **LOCK**:
-  - StepResult mutation 금지 (PRD-007)
-  - Guardian BLOCK은 자동 실행 차단 아님 (InterventionRequired로만 전환)
-  - Plan Hash/Bundle Pin 무결성 유지 (PRD-012A/PRD-018)
-- **Acceptance Criteria**:
-  - 동일 입력에서 Guardian 결과 결정론적 재현 가능
-  - BLOCK 발생 시 InterventionRequired 전환 및 Resume 경로 정상 작동
-  - 기존 PRD-001~018 회귀 테스트 통과
+> **Status:** CLOSED (Exit Criteria 6/6 통과)
 
 ---
 
-### **2. Phase 7.5 — Decision Capture Layer + WorkItem Manager 🔵 계획** *(2026-02-26 신규 추가)*
+#### PRD-022: Guardian Enforcement Layer
+**상태: ✅ COMPLETED (2026-02-27)**
 
-#### PRD-025: Decision Capture Layer + WorkItem & Completion Policy Evaluator
+**구현 완료 사항:**
+- Execution Hook 기반 Guardian Validator 도입 (preflight + post)
+- `ValidatorFinding` 타입 도입 및 GraphState.validatorFindings append-only 구조 확정
+- POLICY class WARN/BLOCK → InterventionRequired 전환 정책 구현
+- SAFETY class BLOCK → 즉시 실행 차단 유지
+- Evidence persistence는 PersistSession 단계에서만 수행 (Cycle-End SSOT 유지)
+- logic_hash 기반 결정론적 재현 보장
+- Plan Hash(PRD-012A)와 완전 분리 유지
 
-> **배경**: 오늘 대화에서 설계 확정. AI 코딩 병목의 핵심 해결책으로, 대화에서 자연스럽게 나온 수정 지시/규칙을 자동 감지하여 오염 없이 DecisionVersion으로 안전하게 반영하는 레이어.
+**의미:**
+- Guardian은 더 이상 “계획된 레이어”가 아니라 Core Engine Set의 일부
+- PRD-025 Decision Commit Gate와 구조적으로 정합성 확보
+- Atlas(026) → Guardian(022) → Decision(025) 삼각 구조 완성
+
+**LOCK 확인:**
+- StepResult mutation 금지 유지
+- PlanHash 입력에 validatorFindings 포함 금지
+- Atlas → Decision 자동 변경 루프 금지
+
+---
+
+### **2. Phase 7.5 — Decision Capture Layer + WorkItem Manager**
+
+#### PRD-025: Decision Capture Layer
+상태: ✅ COMPLETED (2026-02-27)
+
+- Structured reason + root evidence Commit Gate 구현
+- DecisionVersion에 reason JSON 영속 저장
+- InterventionRequired BLOCK 정책 구현
+- Plan Hash와 Decision Payload 완전 분리
+- Atlas 동기화는 PRD-026 Cycle-End 책임 유지
+
+⚠️ WorkItem 및 completion_policy는 PRD-027 범위로 분리.
 
 - **목표**:
   - 전문가가 "이거 왜 이렇게 했어?" → AI 근거 설명 → "그건 틀렸어, 이렇게 해" 흐름만으로 자동으로 규칙이 구조화되고 저장되는 구조 구현.
   - 별도 규칙 설정 UI 없이 대화 자체가 번들 생성 인터페이스가 되도록 함.
   - 코딩 번들 온보딩의 핵심 UX 기반.
-
-- **레이어 삽입 위치 (기존 루프 무손상)**:
-  ```
-  Conversation Turn
-    → Decision Capture Layer   ← (신규)
-    → Change Context (풍부해짐)
-    → Atlas Query
-    → ... (기존 루프 그대로)
-  ```
 
 - **핵심 산출물**:
   - Candidate → Proposed → Committed 3단계 오염 방지 필터
@@ -170,6 +186,8 @@
   - WorkItem 상태 전이 순서 강제 확인 (임의 점프 불가)
   - completion_policy 조건 충족 시 VERIFIED 자동 판정 확인 (auto_verify_allowed=true 케이스)
   - 기존 Atlas 루프 회귀 테스트 통과
+
+> **Status:** CLOSED (VERIFIED 자동 판정 제외, PRD-027 범위)
 
 ---
 
@@ -236,6 +254,15 @@
 - Physical AI 확장 필드 예약 (device_id, sensor refs 등)
 - Semantic Versioning 운영 원칙 선언 (Bundle/Decision 계층)
 - **PRD-028 슬롯 예약: Domain Pack Library + Pack Validation** (schema, allowlist, budget, versioning) — 코딩 번들 이후 두 번째 도메인 진입 시점에 독립 PRD로 분리
+- Future Vault/PII Isolation Slot: Decision 구조에 `vaultRefs` 확장 필드 사전 확보 (외부 암호화 계층 대비, PlanHash/AtlasHash와 payload 결합 금지).
+
+## Phase X — Multi-Domain Orchestrator (Planned)
+
+- 목적: 유저 입력 기반 자동 도메인 라우팅 레이어 도입
+- 원칙: Router-only (Commit / WorkItem 상태 변경 권한 없음)
+- 정책: Confidence 기반 자동 전환 + 애매 시 사용자 확인
+- 전제: PRD-026/025/022/028 안정화 이후 착수
+- 비고: 엔진 SSOT 및 Enforcer 체계를 침해하지 않는 상위 UX 레이어
 
 ---
 
@@ -298,19 +325,26 @@
 | PRD-019 | Dev Mode Overlay | COMPLETED | Phase 6A |
 | PRD-020 | Extensible Message Schema | PLANNED | Phase 11 |
 | PRD-021 | Core Extensibility Patch (Execution Hook & Strategy Port) | COMPLETED | Phase 6.5 |
-| PRD-022 | Guardian Enforcement Robot | PLANNED | Phase 7 |
+| PRD-022 | Guardian Enforcement Layer | COMPLETED | Phase 7 |
 | PRD-023 | Retrieval Intelligence Upgrade | PLANNED | Phase 8 |
 | PRD-024 | Phase 12-A Structural Safety Seal | COMPLETED | Phase 12-A |
-| PRD-025 | Decision Capture Layer + WorkItem & Completion Policy Evaluator | PLANNED | Phase 7.5 |
-| PRD-026 | Atlas Index Engine (Index Build/Update + Partial Scan Budget Enforcer) | PLANNED | Phase 7 (선행) |
-| PRD-027 | (슬롯 예약) WorkItem 독립 분리 — PRD-025 범위 초과 시 | DEFERRED | Phase 7.5+ |
+| PRD-025 | Decision Capture Layer + WorkItem & Completion Policy Evaluator | COMPLETED | Phase 7.5 |
+| PRD-026 | Atlas Index Engine (Index Build/Update + Partial Scan Budget Enforcer) | COMPLETED | Phase 7 |
+#### PRD-027: WorkItem Completion & VERIFIED Engine
+**상태: 🔵 PLANNED**
+
+- WorkItem v1 엔티티 (테이블 + 상태머신) 도입
+- 상태 전이 강제 (PROPOSED → ... → VERIFIED → CLOSED)
+- completion_policy evaluator (Domain Pack 기반)
+- auto_verify_allowed 정책 지원
+- Atlas stale 시 auto-verify 금지
 | PRD-028 | (슬롯 예약) Domain Pack Library + Pack Validation | DEFERRED | Phase 12-B |
 
 ### **B. Definition of Done (DoD)**
 모든 단계는 [01 Master Blueprint](./01_Master_Blueprint.md)의 철학을 준수해야 하며, Core 수정 없이 번들/정책 수준에서 확장이 가능해야 함.
 
 ---
-*Last Updated: 2026-02-26 (PRD-025~028 추가 / Atlas Index Engine PRD-026 Phase 7 선행 배치 / WorkItem 범위 PRD-025 통합 명시 / PRD-028 Deferred 슬롯 예약 / 번들 전략 로드맵 IV 섹션 추가 / 전략 컨텍스트 추가)*
+*Last Updated: 2026-02-27 (PRD-022/025/026 COMPLETED 반영)*
 
 ---
 
@@ -325,4 +359,3 @@
 
 본 항목은 현재 기능 설계를 변경하지 않으며,
 운영 하드닝 단계에서만 다룬다.
-
