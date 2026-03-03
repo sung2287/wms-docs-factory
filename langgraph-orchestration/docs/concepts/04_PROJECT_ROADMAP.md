@@ -83,6 +83,7 @@
 - PRD-033 -- CLOSED
 - PRD-034 -- CLOSED
 - PRD-035 -- CLOSED
+- PRD-036 -- CLOSED
 
 ---
 
@@ -357,6 +358,89 @@
 
 ---
 
+#### PRD-036: Web Shell Live Entry
+
+상태: ✅ COMPLETED (2026-03-02)
+
+**구현 완료 사항:**
+- `/v2` Web Shell을 정본(Authoritative) 런타임 표면으로 확립
+- 모든 기능/테스트에 웹 진입점 보장 (CLI-only는 제품 기능이 아님)
+- Intervention 핸들링, Atlas Dev Panel, Policy Registry 패널 분리 완료
+
+**의미:**
+- Web Runtime Primacy 원칙을 제품 수준에서 실현
+- 이후 Policy Center API(PRD-037)의 독립 진입점 기반 확보
+
+---
+
+### **3.7 Phase 8.7 — Policy System Reboot 🟡 진행 중**
+
+> **Design Origin:** `docs/temp/policy_system_reboot_design_canvas_v_3.md`
+>
+> 현재 정책 시스템의 핵심 문제(등록이 실행 흐름에 종속, 정책 0개 크래시, 독립 진입점 부재)를
+> 해결하여 **정책을 독립 기능으로 격상**하는 단계이다.
+
+#### PRD-037: Policy Center API 🟡 OPEN
+
+**목표:**
+- 정책 CRUD를 독립 기능으로 제공하는 API 구축 (`/api/policy/*`)
+- 정책 0개 상태(Zero-Policy)를 정상 상태로 정의하여 시스템 안정성 확보
+- Web Shell `/v2`에서 Policy Center 독립 진입점 확장
+
+**핵심 범위:**
+- `GET /api/policy/list`, `GET /api/policy/:rootId` — 정책 조회
+- `POST /api/policy/register` — 독립 등록 (body = `PolicyRegistrationRequest` pass-through)
+- `POST /api/policy/:rootId/deprecate` — 정책 비활성화
+- `assertRunnable()` policyRef 가드를 domain allowlist 기반으로 조건부 완화
+- Engine-level policy-less handling: synthetic ALLOW finding으로 UI/로그 일관성 유지
+
+**Hard Invariants:**
+- Registration Executor 단일 경로 재사용 (PRD-033 LOCK 유지)
+- API-Runtime Isolation (executePlan/runGraph 호출 경로와 완전 분리)
+- Next-Run Effect 모델 준수
+
+**ABCD 문서:** A/B/C/D 초안 완료, 구현 착수 가능
+
+---
+
+#### PRD-038: Policy Expression Layer 📋 PLANNED
+
+**목표:**
+- 정책 표현 3계층(raw_text / compiled_rule / metadata) 스키마 도입
+- 자연어 → compiled_rule 변환 파서 구현 (LLM 기반 또는 규칙 기반)
+- compiled_rule = SSOT, raw_text = 사용자 노출용
+
+**핵심 원칙:**
+- 저장 시점에 compiled_rule 확정 (Determinism 보장)
+- compiled_rule은 UI에서 편집 불가 (읽기 전용)
+- 사용자 친화적 정책 생성 UX
+
+**선행 조건:** PRD-037 (Policy Center API 완료 후 착수)
+
+---
+
+#### PRD-039: ValidatorFinding Metadata Extension 📋 PLANNED
+
+**목표:**
+- `ValidatorFinding`에 `reasonCode` / `recommendedActions` 메타데이터 확장
+- Policy Center ↔ Guardian 등록 시점 검증 연동
+- 기존 ALLOW/WARN/BLOCK 타입 유지 + optional 메타데이터 부가 방식
+
+**핵심 원칙:**
+- 기존 `ValidatorFinding` 인터페이스의 하위 호환성 유지
+- PRD-022/031의 CLOSED 계약 침해 없음
+
+**선행 조건:** PRD-037 완료 후 착수
+
+---
+
+구현 순서 (계획):
+1) PRD-037 (Policy Center API: 독립 진입점 + Zero-Policy fallback) 🟡
+2) PRD-038 (Policy Expression Layer: 자연어 변환 + 3계층 스키마)
+3) PRD-039 (ValidatorFinding 메타데이터 확장 + 등록 검증)
+
+---
+
 ### **4. Phase 9 – 인지 지능 고도화 (Letta Anchor 연동) 🔵 계획**
 - **목표**: 대화 압축 중 Anchor 자동 감지 및 Retrieval 시 원문 확인 강제 워크플로우 구현.
 - **의미**: "기억하는 수석 아키텍트"로서의 인지 뼈대 완성.
@@ -495,12 +579,16 @@
 | PRD-033 | Policy Registration Engine | COMPLETED | Phase 8.5 |
 | PRD-034 | Policy Modification & Conflict Resolution Flow | COMPLETED | Phase 8.5 |
 | PRD-035 | Policy Decision Core Unlock (scope allowlist + intervention wiring) | COMPLETED | Phase 8.5 |
+| PRD-036 | Web Shell Live Entry | COMPLETED | Phase 8.5 |
+| PRD-037 | Policy Center API (독립 CRUD + Zero-Policy fallback) | OPEN | Phase 8.7 |
+| PRD-038 | Policy Expression Layer (자연어 → compiled_rule 3계층) | PLANNED | Phase 8.7 |
+| PRD-039 | ValidatorFinding Metadata Extension (reasonCode / recommendedActions) | PLANNED | Phase 8.7 |
 
 ### **B. Definition of Done (DoD)**
 모든 단계는 [01 Master Blueprint](./01_Master_Blueprint.md)의 철학을 준수해야 하며, Core 수정 없이 번들/정책 수준에서 확장이 가능해야 함.
 
 ---
-*Last Updated: 2026-03-02 (PRD-035 CLOSED)*
+*Last Updated: 2026-03-03 (PRD-036 CLOSED, PRD-037 OPEN, PRD-038/039 PLANNED)*
 
 ---
 
