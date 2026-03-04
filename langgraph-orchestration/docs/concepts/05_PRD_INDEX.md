@@ -18,13 +18,34 @@ PRD-015: Chat Timeline Rendering v2
 PRD-016: Session Management Panel
 PRD-017: Provider / Model / Domain UI Control
 PRD-018: Bundle Promotion Pipeline
+PRD-019: Dev Mode Overlay
+PRD-021: Core Extensibility Patch
+PRD-022: Guardian Enforcement Layer
+PRD-023: Retrieval Intelligence Upgrade
+PRD-024: Structural Safety Seal
+PRD-025: Decision Capture Layer
+PRD-026: Atlas Index Engine
+PRD-027: WorkItem Completion & VERIFIED Engine
+PRD-028: Domain Pack Library + Pack Validation
+PRD-029: Persist Proposal (Ask-to-Commit)
+PRD-030: Guardian YAML Wiring
+PRD-031: Guardian Rule Set Implementation
+PRD-032: Live Validation Harness & Seed Data Stabilization
+PRD-033: Policy Registration Engine
+PRD-034: Policy Modification & Conflict Resolution Flow
+PRD-035: Policy Decision Core Unlock
+PRD-036: Web Shell Live Entry
+PRD-037: Policy Center API
+PRD-038: Policy Expression Layer
+PRD-039: ValidatorFinding Metadata Extension
+PRD-040: Policy Conflict Seed Scenario
+PRD-041: Policy Cycle E2E Test
 
 [ IN-PROGRESS / MAIN ]
 
 [ PLANNED / MAIN ]
-PRD-019: Dev Mode Overlay & Debug Projection
-- Plan metadata Dev 표시
 PRD-020: Extensible Message Schema
+PRD-042: Policy Enforcement at Execution Boundary
 
 
 ### PRD-009 Deferred Note (Response Schema)

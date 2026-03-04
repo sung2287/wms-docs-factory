@@ -84,6 +84,11 @@
 - PRD-034 -- CLOSED
 - PRD-035 -- CLOSED
 - PRD-036 -- CLOSED
+- PRD-037 -- CLOSED
+- PRD-038 -- CLOSED
+- PRD-039 -- CLOSED
+- PRD-040 -- CLOSED
+- PRD-041 -- CLOSED
 
 ---
 
@@ -380,64 +385,133 @@
 > 현재 정책 시스템의 핵심 문제(등록이 실행 흐름에 종속, 정책 0개 크래시, 독립 진입점 부재)를
 > 해결하여 **정책을 독립 기능으로 격상**하는 단계이다.
 
-#### PRD-037: Policy Center API 🟡 OPEN
+#### PRD-037: Policy Center API ✅ CLOSED
 
-**목표:**
-- 정책 CRUD를 독립 기능으로 제공하는 API 구축 (`/api/policy/*`)
-- 정책 0개 상태(Zero-Policy)를 정상 상태로 정의하여 시스템 안정성 확보
+상태: ✅ COMPLETED (2026-03-03)
+
+**구현 완료 사항:**
+- Policy Center API 엔드포인트 구축 (`GET /api/policy/list`, `GET /api/policy/:rootId`, `POST /api/policy/register`, `POST /api/policy/:rootId/deprecate`)
+- 정책 0개 상태(Zero-Policy)를 정상 상태로 정의. 실행 차단/게이팅/강제 UX 금지
+- Registration Executor 단일 경로 재사용 (PRD-033 LOCK 유지)
+- API-Runtime Isolation 계약 신설
 - Web Shell `/v2`에서 Policy Center 독립 진입점 확장
 
+**의미:**
+- 정책이 실행 흐름의 부산물이 아닌 독립 기능으로 격상
+- Policy is Optional 불변식 확립
+
+**LOCK 확인:**
+- API 핸들러는 executePlan/runGraph 호출 경로와 완전 분리
+- 정책 변경은 next-run에서만 반영 (Next-Run Effect)
+- PlanHash 불변 유지
+
+---
+
+#### PRD-038: Policy Expression Layer ✅ CLOSED
+
+상태: ✅ COMPLETED (2026-03-04)
+
+**구현 완료 사항:**
+- 정책 표현 3계층(`raw_text` / `compiled_rule` / `metadata`) 스키마 도입
+- `PolicyRegistrationRequest`에 3계층 optional 필드 추가
+- `compiled_rule` = Expression Representation (등록 시점 중간 표현)
+- 실행 시점 SSOT = `normalizedPolicyBody` LOCK 확정
+- Registration Executor 3계층 pass-through 등록
+
+**의미:**
+- 정책 표현의 구조화. 자연어/규칙/메타데이터를 분리하여 정책 생성 UX 기반 확보
+- 런타임 평가 체인 불변 유지 (비파괴 확장)
+
+**LOCK 확인:**
+- compiled_rule은 런타임에서 직접 소비되지 않음
+- normalizedPolicyBody가 유일한 runtime SSOT
+- PlanHash 불변 유지
+
+---
+
+#### PRD-039: ValidatorFinding Metadata Extension ✅ CLOSED
+
+상태: ✅ COMPLETED (2026-03-04)
+
+**구현 완료 사항:**
+- `ValidatorFinding`에 optional 3필드(`reasonCode`, `recommendedActions`, `policyRuleRef`) 직접 추가
+- `asValidatorResult` 허용 키 확장 + 각 필드 검증 로직 구현
+- `PolicyConflictProjection`으로 메타데이터 전달 파이프라인 구축
+- `evidence_integrity` validator에서 `reasonCode` + `recommendedActions` 생성
+- 기존 validator 하위 호환성 유지 (metadata 없이도 정상 동작)
+
+**의미:**
+- Guardian finding에 추가 맥락(이유/권장액션/정책참조)을 부여할 수 있는 확장 기반 확보
+- PRD-022/031 기존 계약 침해 없이 점진적 채택 가능
+
+**LOCK 확인:**
+- PlanHash 불변 유지 (findings는 해시 입력에서 제외)
+- finding identity 기존 계산 로직 불변
+- GuardianAudit 기존 스키마 호환 유지 (JSON blob 자연 흡수)
+
+---
+
+#### PRD-040: Policy Conflict Seed Scenario ✅ COMPLETED (2026-03-04)
+
+**목표:**
+- 항상 재현 가능한 정책 충돌 시나리오 fixture 제공
+- 개발/디버그/데모/CI에서 사용할 수 있는 결정론적 충돌 발생 번들
+
 **핵심 범위:**
-- `GET /api/policy/list`, `GET /api/policy/:rootId` — 정책 조회
-- `POST /api/policy/register` — 독립 등록 (body = `PolicyRegistrationRequest` pass-through)
-- `POST /api/policy/:rootId/deprecate` — 정책 비활성화
-- `assertRunnable()` policyRef 가드를 domain allowlist 기반으로 조건부 완화
-- Engine-level policy-less handling: synthetic ALLOW finding으로 UI/로그 일관성 유지
+- PersistDecision step에 evidenceRefs 의도적 누락으로 evidence_integrity BLOCK 보장
+- 실행 시 항상 Guardian BLOCK finding 발생 보장
+- PRD-032 seed harness 인프라 재사용
 
-**Hard Invariants:**
-- Registration Executor 단일 경로 재사용 (PRD-033 LOCK 유지)
-- API-Runtime Isolation (executePlan/runGraph 호출 경로와 완전 분리)
-- Next-Run Effect 모델 준수
-
-**ABCD 문서:** A/B/C/D 초안 완료, 구현 착수 가능
+**성격:** 개발 인프라 (runtime/test fixtures)
+**선행 조건:** PRD-039 완료
 
 ---
 
-#### PRD-038: Policy Expression Layer 📋 PLANNED
+#### PRD-041: Policy Cycle E2E Test ✅ COMPLETED (2026-03-04)
 
 **목표:**
-- 정책 표현 3계층(raw_text / compiled_rule / metadata) 스키마 도입
-- 자연어 → compiled_rule 변환 파서 구현 (LLM 기반 또는 규칙 기반)
-- compiled_rule = SSOT, raw_text = 사용자 노출용
+- 정책 사이클 전체(conflict → action → registry mutation → resolved)를 자동 회귀 테스트로 고정
 
-**핵심 원칙:**
-- 저장 시점에 compiled_rule 확정 (Determinism 보장)
-- compiled_rule은 UI에서 편집 불가 (읽기 전용)
-- 사용자 친화적 정책 생성 UX
+**핵심 범위:**
+- PRD-040 seed fixture를 소비하여 전 사이클 검증
+- 시나리오 A: run → BLOCK → REGISTER_POLICY → registry INSERT → evidenceRefs re-run → ALLOW
+- 시나리오 B: run → BLOCK → KEEP_POLICY → same seed re-run → BLOCK
+- 기존 integration test 인프라 재사용
 
-**선행 조건:** PRD-037 (Policy Center API 완료 후 착수)
+**성격:** 품질 보증 장치 (tests/integration)
+**선행 조건:** PRD-040 완료
 
 ---
 
-#### PRD-039: ValidatorFinding Metadata Extension 📋 PLANNED
+#### PRD-042: Policy Enforcement at Execution Boundary 📋 PLANNED
 
 **목표:**
-- `ValidatorFinding`에 `reasonCode` / `recommendedActions` 메타데이터 확장
-- Policy Center ↔ Guardian 등록 시점 검증 연동
-- 기존 ALLOW/WARN/BLOCK 타입 유지 + optional 메타데이터 부가 방식
+- 등록된 정책을 plan 실행 시점에 적용하여 step 허용/차단
+- "정책이 에이전트 행동을 실제로 변경한다"를 최소 범위로 증명
 
-**핵심 원칙:**
-- 기존 `ValidatorFinding` 인터페이스의 하위 호환성 유지
-- PRD-022/031의 CLOSED 계약 침해 없음
+**핵심 범위:**
+- `resolveRegisteredPolicySource()`로 로드된 정책을 ExecutionPlan 실행 시 적용
+- 정책에 부합하지 않는 step은 실행 단계에서 차단/경고
+- 기존 validator/guardian 인프라 패턴 재사용
 
-**선행 조건:** PRD-037 완료 후 착수
+**성격:** 정책 적용 계층 (src/core)
+**선행 조건:** PRD-041 완료
+**Phase:** 9 (Policy Application)
+
+> **향후 확장 (PRD-04X):**
+> 정책 modes를 해석하여 ExecutionPlan 자체를 생성하는 Policy-to-Plan Resolver.
+> PRD-042에서 "정책이 실행을 제한할 수 있다"를 증명한 후,
+> "정책이 실행을 구성할 수 있다"로 자연 확장.
 
 ---
 
-구현 순서 (계획):
-1) PRD-037 (Policy Center API: 독립 진입점 + Zero-Policy fallback) 🟡
-2) PRD-038 (Policy Expression Layer: 자연어 변환 + 3계층 스키마)
-3) PRD-039 (ValidatorFinding 메타데이터 확장 + 등록 검증)
+구현 순서:
+1) PRD-037 (Policy Center API) ✅
+2) PRD-038 (Policy Expression Layer) ✅
+3) PRD-039 (ValidatorFinding Metadata Extension) ✅
+4) PRD-040 (Policy Conflict Seed Scenario) ✅
+5) PRD-041 (Policy Cycle E2E Test) ✅
+6) PRD-042 (Policy Enforcement at Execution Boundary) 🟡 PLANNED
 
 ---
 
@@ -580,15 +654,18 @@
 | PRD-034 | Policy Modification & Conflict Resolution Flow | COMPLETED | Phase 8.5 |
 | PRD-035 | Policy Decision Core Unlock (scope allowlist + intervention wiring) | COMPLETED | Phase 8.5 |
 | PRD-036 | Web Shell Live Entry | COMPLETED | Phase 8.5 |
-| PRD-037 | Policy Center API (독립 CRUD + Zero-Policy fallback) | OPEN | Phase 8.7 |
-| PRD-038 | Policy Expression Layer (자연어 → compiled_rule 3계층) | PLANNED | Phase 8.7 |
-| PRD-039 | ValidatorFinding Metadata Extension (reasonCode / recommendedActions) | PLANNED | Phase 8.7 |
+| PRD-037 | Policy Center API (독립 CRUD + Zero-Policy fallback) | COMPLETED | Phase 8.7 |
+| PRD-038 | Policy Expression Layer (3계층 스키마 + Expression Representation) | COMPLETED | Phase 8.7 |
+| PRD-039 | ValidatorFinding Metadata Extension (reasonCode / recommendedActions) | COMPLETED | Phase 8.7 |
+| PRD-040 | Policy Conflict Seed Scenario (결정론적 충돌 재현 fixture) | COMPLETED | Phase 8.7 |
+| PRD-041 | Policy Cycle E2E Test (정책 사이클 회귀 테스트) | COMPLETED | Phase 8.7 |
+| PRD-042 | Policy Enforcement at Execution Boundary (정책 실행 시점 적용) | PLANNED | Phase 9 |
 
 ### **B. Definition of Done (DoD)**
 모든 단계는 [01 Master Blueprint](./01_Master_Blueprint.md)의 철학을 준수해야 하며, Core 수정 없이 번들/정책 수준에서 확장이 가능해야 함.
 
 ---
-*Last Updated: 2026-03-03 (PRD-036 CLOSED, PRD-037 OPEN, PRD-038/039 PLANNED)*
+*Last Updated: 2026-03-04 (PRD-037/038/039/040/041 CLOSED, PRD-042 PLANNED)*
 
 ---
 
